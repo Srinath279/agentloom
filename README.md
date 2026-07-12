@@ -21,7 +21,7 @@ execution resumes exactly where it left off. No lost LLM calls, no duplicate spe
 
 - **Retries belong to Temporal, not the SDK.** The OpenAI client is created with
   `max_retries=0`; Temporal's retry policy owns backoff and recovery.
-- **Pydantic data converter** on both client and worker, so OpenAI response types
+- **Pydantic data converter** on both client and worker, so LLM response types
   serialize cleanly through workflow history.
 - **One generic activity, many agents.** Agents differ only by their
   instructions — the pipeline stays declarative inside the workflow.
@@ -52,7 +52,7 @@ execution resumes exactly where it left off. No lost LLM calls, no duplicate spe
 2. **Set your API key** (see `.env.example`):
 
    ```sh
-   export OPENAI_API_KEY=sk-...
+   export ANTHROPIC_API_KEY=your_claude_api_key
    ```
 
 3. **Start the Temporal dev server:**
