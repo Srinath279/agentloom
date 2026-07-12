@@ -5,6 +5,7 @@ types serialize cleanly through Temporal.
 """
 
 import asyncio
+import logging
 import os
 
 from temporalio.client import Client
@@ -17,6 +18,20 @@ from workflows.hello_world_workflow import HelloWorld
 from workflows.loom_workflow import LoomWorkflow
 
 TASK_QUEUE = "agentloom-task-queue"
+
+
+def _configure_logging() -> None:
+    # WORKER_LOG_FILE also feeds Promtail (see observability/promtail.yml),
+    # which ships these lines into Loki for the Grafana "Loki" datasource.
+    handlers = [logging.StreamHandler()]
+    log_file = os.environ.get("WORKER_LOG_FILE")
+    if log_file:
+        handlers.append(logging.FileHandler(log_file))
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        handlers=handlers,
+    )
 
 
 async def main():
@@ -43,4 +58,5 @@ async def main():
 
 
 if __name__ == "__main__":
+    _configure_logging()
     asyncio.run(main())

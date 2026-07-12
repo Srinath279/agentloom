@@ -14,8 +14,10 @@ Declared as the `grafana` service in
 Auto-provisioned on startup from
 [`observability/grafana/provisioning/`](../../observability/grafana/provisioning/):
 
-- **Datasource** (`datasources/prometheus.yml`) — points at
-  `http://localhost:9090`, set as default.
+- **Datasources** — `datasources/prometheus.yml` points at
+  `http://localhost:9090` (default); `datasources/loki.yml` points at
+  `http://localhost:3100` for the worker's logs (see
+  [docs/services/loki.md](loki.md)).
 - **Dashboard provider** (`dashboards/provider.yml`) — loads every dashboard
   JSON from `observability/grafana/dashboards/` into a "Temporal" folder,
   polling for changes every 30s.
@@ -63,9 +65,9 @@ down, not a Grafana problem.
 - **Anonymous admin access is a local-dev convenience, not a production
   posture.** Never carry `GF_AUTH_ANONYMOUS_ORG_ROLE=Admin` into any
   deployment reachable outside your own machine.
-- **Keep the datasource UID stable** (`uid: prometheus` in
-  `datasources/prometheus.yml`) — dashboard JSON panels reference datasources
-  by UID; changing it breaks every panel until they're repointed.
+- **Keep datasource UIDs stable** (`uid: prometheus` / `uid: loki`) —
+  dashboard JSON panels reference datasources by UID; changing one breaks
+  every panel until they're repointed.
 - **One folder per logical source of dashboards.** The `provider.yml`
   convention here (`folder: Temporal`) makes it easy to later add e.g. a
   `folder: Langfuse` provider for LLM-cost dashboards without mixing concerns

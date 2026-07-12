@@ -7,33 +7,41 @@ ties both layers together as a single set of local services.
 
 ## Components
 
+```mermaid
+flowchart TB
+    subgraph flox["Flox environment (flox services start/stop/status)"]
+        direction TB
+
+        subgraph exec["execution layer"]
+            direction LR
+            SW["start_workflow.py"] -->|"execute_workflow"| T["Temporal server (dev mode)\ngRPC :7233 · Web UI :8233 · metrics :9091"]
+            T <-->|"poll agentloom-task-queue"| W["AgentLoom worker (worker.py)\nSDK metrics :9464"]
+            W -->|"HTTPS"| OR["OpenRouter\n(proxies to Claude)"]
+            W -->|"HTTP (local GPU)"| OL["Ollama\nlocalhost:11434"]
+        end
+
+        subgraph obs["observability layer"]
+            direction LR
+            P["Prometheus :9090"] -->|"datasource"| G["Grafana :3000"]
+            L["Loki :3100"] -->|"datasource"| G
+            PT["Promtail"] -->|"push"| L
+            LF["Langfuse (docker compose)\nweb :3001"]
+        end
+
+        T -->|"scraped"| P
+        W -->|"scraped"| P
+        W -->|"writes worker.log"| PT
+        W -->|"generation spans"| LF
+    end
+
+    style OR stroke-dasharray: 4 3
+    style OL stroke-dasharray: 4 3
 ```
-                              ┌─────────────────────────────────────────┐
-                              │              Flox environment             │
-                              │  (flox services start/stop/status)       │
-                              └─────────────────────────────────────────┘
-                                                  │ manages
-        ┌─────────────────────────────────────────┼─────────────────────────────────────────┐
-        │                                          │                                          │
-        ▼                                          ▼                                          ▼
-┌───────────────────┐                    ┌───────────────────┐                    ┌───────────────────┐
-│  Temporal server   │◀──gRPC :7233──────│  AgentLoom worker  │──HTTPS───▶ Anthropic API
-│  (dev mode)        │   Web UI :8233     │  (worker.py)        │           (LLM calls)
-│  metrics :9091      │                    │  SDK metrics :9464  │
-└─────────┬──────────┘                    └─────────┬──────────┘
-          │ scraped by                               │ scraped by, and traces sent by
-          ▼                                          ▼
-┌───────────────────┐                    ┌───────────────────────────┐
-│    Prometheus       │◀── scrapes both ──│   Langfuse (docker compose) │
-│    :9090             │                   │   web :3001, worker :3030,  │
-└─────────┬──────────┘                    │   postgres/clickhouse/redis/ │
-          │ datasource                     │   minio (internal ports)     │
-          ▼                                └───────────────────────────┘
-┌───────────────────┐
-│      Grafana        │
-│      :3000           │
-└───────────────────┘
-```
+
+Only one of **OpenRouter** or **Ollama** is active at a time — selected by
+`LLM_BASE_URL`/`LLM_MODEL` in `.env` (see
+[docs/services/activities.md](services/activities.md)). Everything else in
+the diagram runs regardless of which LLM backend is configured.
 
 ## Request flow, step by step
 
@@ -50,8 +58,11 @@ ties both layers together as a single set of local services.
    the worker executes it.
 4. The worker executes the **activity** (`activities/openai_responses.py`) —
    this is where non-deterministic, real-world work happens: an HTTP call to
-   the Anthropic API, wrapped in a Langfuse `generation` span tagged with the
-   workflow ID (so every agent step of one run shows up as a single trace).
+   an OpenAI-compatible chat completions API — OpenRouter (which proxies to
+   Claude) by default, or a local model server like Ollama when
+   `LLM_BASE_URL` is set — wrapped in a Langfuse `generation` span tagged
+   with the workflow ID (so every agent step of one run shows up as a single
+   trace).
 5. The activity's return value is recorded in workflow history. If the worker
    crashes before this point, Temporal simply reschedules the activity when a
    worker reconnects — no special recovery code needed.
@@ -64,7 +75,10 @@ ties both layers together as a single set of local services.
 8. Throughout, the worker's Temporal SDK metrics (activity latencies, retry
    counts, task-queue backlog, etc.) are exposed on `:9464` and the Temporal
    server's internal metrics on `:9091`. Prometheus scrapes both every 10s;
-   Grafana renders them via the pre-provisioned dashboards.
+   Grafana renders them via the pre-provisioned dashboards. In parallel, the
+   worker's own log lines are written to a file that Promtail tails and pushes
+   into Loki, so they're searchable in Grafana too (see
+   [docs/services/loki.md](services/loki.md)).
 
 ## Why this design
 
@@ -107,5 +121,6 @@ ties both layers together as a single set of local services.
 - [docs/services/workflows.md](services/workflows.md)
 - [docs/services/prometheus.md](services/prometheus.md)
 - [docs/services/grafana.md](services/grafana.md)
+- [docs/services/loki.md](services/loki.md)
 - [docs/services/langfuse.md](services/langfuse.md)
 - [docs/services/flox.md](services/flox.md)

@@ -6,6 +6,10 @@
       "grafana": {
         "pkg-path": "grafana"
       },
+      "grafana-loki": {
+        "pkg-path": "grafana-loki",
+        "version": "3.6.8"
+      },
       "prometheus": {
         "pkg-path": "prometheus"
       },
@@ -39,14 +43,20 @@
       "langfuse": {
         "command": "  exec docker compose -f \"$FLOX_ENV_PROJECT/observability/langfuse/docker-compose.yml\" up\n"
       },
+      "loki": {
+        "command": "  mkdir -p \"$FLOX_ENV_CACHE/loki\"\n  exec loki -config.file=\"$FLOX_ENV_PROJECT/observability/loki.yml\" -config.expand-env=true\n"
+      },
       "prometheus": {
         "command": "  mkdir -p \"$FLOX_ENV_CACHE/prometheus-data\"\n  exec prometheus --config.file=\"$FLOX_ENV_PROJECT/observability/prometheus.yml\" --storage.tsdb.path=\"$FLOX_ENV_CACHE/prometheus-data\" --web.listen-address=localhost:9090\n"
+      },
+      "promtail": {
+        "command": "  mkdir -p \"$FLOX_ENV_CACHE/promtail\"\n  exec promtail -config.file=\"$FLOX_ENV_PROJECT/observability/promtail.yml\" -config.expand-env=true\n"
       },
       "temporal": {
         "command": "  exec temporal server start-dev --metrics-port 9091 --db-filename \"$FLOX_ENV_CACHE/temporal.db\"\n"
       },
       "worker": {
-        "command": "  cd \"$FLOX_ENV_PROJECT\"\n  until temporal operator cluster health --address localhost:7233 >/dev/null 2>&1; do\n    sleep 1\n  done\n  exec \"$PYTHON_DIR/bin/python\" worker.py\n"
+        "command": "  cd \"$FLOX_ENV_PROJECT\"\n  until temporal operator cluster health --address localhost:7233 >/dev/null 2>&1; do\n    sleep 1\n  done\n  export WORKER_LOG_FILE=\"$FLOX_ENV_CACHE/worker.log\"\n  exec \"$PYTHON_DIR/bin/python\" worker.py\n"
       }
     }
   },
@@ -54,27 +64,28 @@
     {
       "attr_path": "grafana",
       "broken": false,
-      "derivation": "/nix/store/ixf0xhf46g10ld2hsqk1v4hpyirb042f-grafana-13.0.3.drv",
+      "derivation": "/nix/store/n8lpgk65d2k4zw455vn23sbklk14rms2-grafana-12.4.2.drv",
       "description": "Gorgeous metric viz, dashboards & editors for Graphite, InfluxDB & OpenTSDB",
       "install_id": "grafana",
       "license": "AGPL-3.0-only",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
-      "name": "grafana-13.0.3",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "grafana-12.4.2",
       "pname": "grafana",
-      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
-      "rev_count": 1027867,
-      "rev_date": "2026-07-05T04:06:12Z",
-      "scrape_date": "2026-07-06T03:12:56.368432Z",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T18:01:04.722091Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "13.0.3",
+      "version": "12.4.2",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/al3cfrlw6zff7sr68il9rr1z24anxfhm-grafana-13.0.3"
+        "out": "/nix/store/02gqqcyz6jzarlxhdh3sz5r8jym9ss3k-grafana-12.4.2"
       },
       "system": "aarch64-darwin",
       "group": "toplevel",
@@ -83,27 +94,28 @@
     {
       "attr_path": "grafana",
       "broken": false,
-      "derivation": "/nix/store/llx7mn392x0iy9vyzikl93sl85csz986-grafana-13.0.3.drv",
+      "derivation": "/nix/store/nqg24gyd381i1niy4lqsikxr98icy02a-grafana-12.4.2.drv",
       "description": "Gorgeous metric viz, dashboards & editors for Graphite, InfluxDB & OpenTSDB",
       "install_id": "grafana",
       "license": "AGPL-3.0-only",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
-      "name": "grafana-13.0.3",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "grafana-12.4.2",
       "pname": "grafana",
-      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
-      "rev_count": 1027867,
-      "rev_date": "2026-07-05T04:06:12Z",
-      "scrape_date": "2026-07-06T03:41:24.120407Z",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T18:32:37.785485Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "13.0.3",
+      "version": "12.4.2",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/zaahjbwlkigl7b5247aaf5jg869x59i8-grafana-13.0.3"
+        "out": "/nix/store/i5jzhr24npmqfirvf65px1fkhnqy2rwd-grafana-12.4.2"
       },
       "system": "aarch64-linux",
       "group": "toplevel",
@@ -112,27 +124,28 @@
     {
       "attr_path": "grafana",
       "broken": false,
-      "derivation": "/nix/store/chw46lk4ya247w17axnspgx7117vnbgd-grafana-13.0.3.drv",
+      "derivation": "/nix/store/z722pkdzrqqwj8iyzpx4hf7mm1s3klc6-grafana-12.4.2.drv",
       "description": "Gorgeous metric viz, dashboards & editors for Graphite, InfluxDB & OpenTSDB",
       "install_id": "grafana",
       "license": "AGPL-3.0-only",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
-      "name": "grafana-13.0.3",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "grafana-12.4.2",
       "pname": "grafana",
-      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
-      "rev_count": 1027867,
-      "rev_date": "2026-07-05T04:06:12Z",
-      "scrape_date": "2026-07-06T04:09:01.999594Z",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T19:02:19.597631Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "13.0.3",
+      "version": "12.4.2",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/g5i0y94hv1ydnaxnfqf4y3x4cpj7b75d-grafana-13.0.3"
+        "out": "/nix/store/gpr0j8cdack71hl9pk19zkfpz9k3h3kd-grafana-12.4.2"
       },
       "system": "x86_64-darwin",
       "group": "toplevel",
@@ -141,27 +154,148 @@
     {
       "attr_path": "grafana",
       "broken": false,
-      "derivation": "/nix/store/zads7dvx00mh0d9jm0q7fr2g5pq5c6ar-grafana-13.0.3.drv",
+      "derivation": "/nix/store/cddralhim5dgdq1ccha5v7cj8a2shava-grafana-12.4.2.drv",
       "description": "Gorgeous metric viz, dashboards & editors for Graphite, InfluxDB & OpenTSDB",
       "install_id": "grafana",
       "license": "AGPL-3.0-only",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
-      "name": "grafana-13.0.3",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "grafana-12.4.2",
       "pname": "grafana",
-      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
-      "rev_count": 1027867,
-      "rev_date": "2026-07-05T04:06:12Z",
-      "scrape_date": "2026-07-06T04:40:26.951499Z",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T19:36:34.128033Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "13.0.3",
+      "version": "12.4.2",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/cxwvzm7b2f0cfq5slddrqmpkssap0vmp-grafana-13.0.3"
+        "out": "/nix/store/drbdd19y84nx9c4zksiig3vjzmdbi4vl-grafana-12.4.2"
+      },
+      "system": "x86_64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "grafana-loki",
+      "broken": false,
+      "derivation": "/nix/store/6a4vdnm2kbrcws6qz6bgvr2wyl9hxj9c-grafana-loki-3.6.8.drv",
+      "description": "Like Prometheus, but for logs",
+      "install_id": "grafana-loki",
+      "license": "[ AGPL-3.0-only, Apache-2.0 ]",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "grafana-loki-3.6.8",
+      "pname": "grafana-loki",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T18:01:04.723400Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "3.6.8",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/g8pymcnk2f7jknmh7qq30jqvcam3g3xp-grafana-loki-3.6.8"
+      },
+      "system": "aarch64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "grafana-loki",
+      "broken": false,
+      "derivation": "/nix/store/grqbivv76y6bfa4xmxwjy099zrwr6has-grafana-loki-3.6.8.drv",
+      "description": "Like Prometheus, but for logs",
+      "install_id": "grafana-loki",
+      "license": "[ AGPL-3.0-only, Apache-2.0 ]",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "grafana-loki-3.6.8",
+      "pname": "grafana-loki",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T18:32:37.787694Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "3.6.8",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/v9qp5h7wfihc06dd5vy9hicipljsd8p5-grafana-loki-3.6.8"
+      },
+      "system": "aarch64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "grafana-loki",
+      "broken": false,
+      "derivation": "/nix/store/mrh84vqlyzyz41h7jjv6q155hg1kipkb-grafana-loki-3.6.8.drv",
+      "description": "Like Prometheus, but for logs",
+      "install_id": "grafana-loki",
+      "license": "[ AGPL-3.0-only, Apache-2.0 ]",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "grafana-loki-3.6.8",
+      "pname": "grafana-loki",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T19:02:19.598950Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "3.6.8",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/c5ab0jr8yn4mkq88j2lamp0l9pqlk9v2-grafana-loki-3.6.8"
+      },
+      "system": "x86_64-darwin",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "grafana-loki",
+      "broken": false,
+      "derivation": "/nix/store/0m725xylxpij0kz0xa9gjbfphm8an9d7-grafana-loki-3.6.8.drv",
+      "description": "Like Prometheus, but for logs",
+      "install_id": "grafana-loki",
+      "license": "[ AGPL-3.0-only, Apache-2.0 ]",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "grafana-loki-3.6.8",
+      "pname": "grafana-loki",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T19:36:34.130655Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "3.6.8",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/7njwk6nbsgvplknkhb600dgabwzvzkr3-grafana-loki-3.6.8"
       },
       "system": "x86_64-linux",
       "group": "toplevel",
@@ -170,29 +304,30 @@
     {
       "attr_path": "prometheus",
       "broken": false,
-      "derivation": "/nix/store/5sfsgp3yws7w13xc4w83jhwq7s3aav3n-prometheus-3.12.0.drv",
+      "derivation": "/nix/store/cpvc6saqa6s1496mczdbmfjq4nyxhxlp-prometheus-3.10.0.drv",
       "description": "Service monitoring system and time series database",
       "install_id": "prometheus",
       "license": "Apache-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
-      "name": "prometheus-3.12.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "prometheus-3.10.0",
       "pname": "prometheus",
-      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
-      "rev_count": 1027867,
-      "rev_date": "2026-07-05T04:06:12Z",
-      "scrape_date": "2026-07-06T03:13:36.484847Z",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T18:01:42.052784Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "3.12.0",
+      "version": "3.10.0",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "cli": "/nix/store/cjxkiawkmrbckicdh2b0ad5qvq1pzgkm-prometheus-3.12.0-cli",
-        "doc": "/nix/store/zpll5dlg012q6qm221cc9riydlwbc7gk-prometheus-3.12.0-doc",
-        "out": "/nix/store/2gz68l5bzm3bfz99x88bbp8g1lhc5qj7-prometheus-3.12.0"
+        "cli": "/nix/store/zix8c4xs2g7dw6ra5kcxj1hg7yfm22vm-prometheus-3.10.0-cli",
+        "doc": "/nix/store/671k5943yi9g7rx7vkq7zbyixr6lslh0-prometheus-3.10.0-doc",
+        "out": "/nix/store/n2m1n6q7qhm7lj1yhjnpxmr0j3mnaswm-prometheus-3.10.0"
       },
       "system": "aarch64-darwin",
       "group": "toplevel",
@@ -201,29 +336,30 @@
     {
       "attr_path": "prometheus",
       "broken": false,
-      "derivation": "/nix/store/kfn3xv2z7vq3ijvlk0pa9hkhx20rqz1f-prometheus-3.12.0.drv",
+      "derivation": "/nix/store/9myx43wh5712w52lxsqqcm51m84kjkps-prometheus-3.10.0.drv",
       "description": "Service monitoring system and time series database",
       "install_id": "prometheus",
       "license": "Apache-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
-      "name": "prometheus-3.12.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "prometheus-3.10.0",
       "pname": "prometheus",
-      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
-      "rev_count": 1027867,
-      "rev_date": "2026-07-05T04:06:12Z",
-      "scrape_date": "2026-07-06T03:42:21.963990Z",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T18:33:32.023753Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "3.12.0",
+      "version": "3.10.0",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "cli": "/nix/store/ygx9wp3h7jaj4ixyrqaikh8rlidr022l-prometheus-3.12.0-cli",
-        "doc": "/nix/store/zrwsy0wh2pr0a4v9g03axrs6fcnrqdjr-prometheus-3.12.0-doc",
-        "out": "/nix/store/2s6swdpg62x1sx2abh7z3bx2qs73pgih-prometheus-3.12.0"
+        "cli": "/nix/store/y0czv18a6zqk6g0ns638q0ixzl3mc044-prometheus-3.10.0-cli",
+        "doc": "/nix/store/vmpqf3j77g55r57vpygmhfarl1lrhgq3-prometheus-3.10.0-doc",
+        "out": "/nix/store/s2iavfpshjaw0g4whn4aall64lp1rmpf-prometheus-3.10.0"
       },
       "system": "aarch64-linux",
       "group": "toplevel",
@@ -232,29 +368,30 @@
     {
       "attr_path": "prometheus",
       "broken": false,
-      "derivation": "/nix/store/33dywq37wdniw2w2c8s2yvcjj57kh3yg-prometheus-3.12.0.drv",
+      "derivation": "/nix/store/s658swa2dm12rp1vvq4a6fjmv3669qax-prometheus-3.10.0.drv",
       "description": "Service monitoring system and time series database",
       "install_id": "prometheus",
       "license": "Apache-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
-      "name": "prometheus-3.12.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "prometheus-3.10.0",
       "pname": "prometheus",
-      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
-      "rev_count": 1027867,
-      "rev_date": "2026-07-05T04:06:12Z",
-      "scrape_date": "2026-07-06T04:09:52.170384Z",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T19:02:56.524309Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "3.12.0",
+      "version": "3.10.0",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "cli": "/nix/store/996ks8jlbmfy8s0yymvcnjxzb4zwrsp7-prometheus-3.12.0-cli",
-        "doc": "/nix/store/sr2sicb6vpcgnhsyf0l5qxbczfb7pir8-prometheus-3.12.0-doc",
-        "out": "/nix/store/n44wpv45dq811vm3687s5h8ifkyxgl3z-prometheus-3.12.0"
+        "cli": "/nix/store/bc6nbp2b4cnz0gfywx1xskviqn3d2xl9-prometheus-3.10.0-cli",
+        "doc": "/nix/store/6580jg2c7qa9h101vwlm63p4syqvsvh4-prometheus-3.10.0-doc",
+        "out": "/nix/store/72zrzdbsb3a2mi3izafzx0h89bpk87z1-prometheus-3.10.0"
       },
       "system": "x86_64-darwin",
       "group": "toplevel",
@@ -263,29 +400,30 @@
     {
       "attr_path": "prometheus",
       "broken": false,
-      "derivation": "/nix/store/3g4ka2nk0igjnsvdslmvn33j7ib6i1yv-prometheus-3.12.0.drv",
+      "derivation": "/nix/store/mpdzpx0bpwcyjddr1063hkvr4gzzjm79-prometheus-3.10.0.drv",
       "description": "Service monitoring system and time series database",
       "install_id": "prometheus",
       "license": "Apache-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
-      "name": "prometheus-3.12.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "prometheus-3.10.0",
       "pname": "prometheus",
-      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
-      "rev_count": 1027867,
-      "rev_date": "2026-07-05T04:06:12Z",
-      "scrape_date": "2026-07-06T04:41:28.460418Z",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T19:37:33.350350Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "3.12.0",
+      "version": "3.10.0",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "cli": "/nix/store/1jalasbc9yr8740mv7g6km5kxv57v77g-prometheus-3.12.0-cli",
-        "doc": "/nix/store/69wbw4ijc7lpm0hfjpfs91535xxdww3j-prometheus-3.12.0-doc",
-        "out": "/nix/store/6p845wjwwak4jy1br0cpjanqvlbxin06-prometheus-3.12.0"
+        "cli": "/nix/store/v4f96n4wvday2grr33k7pcz8syaj424f-prometheus-3.10.0-cli",
+        "doc": "/nix/store/pvkmr3cgqrppaalsjfb1xr673jhwif7w-prometheus-3.10.0-doc",
+        "out": "/nix/store/pflz4rcsr57lp0cavaidsnnrij0q01h8-prometheus-3.10.0"
       },
       "system": "x86_64-linux",
       "group": "toplevel",
@@ -294,27 +432,30 @@
     {
       "attr_path": "python3",
       "broken": false,
-      "derivation": "/nix/store/ffz1bwjdzglryqx0pn3jngal4bz66xfh-python3-3.13.13.drv",
+      "derivation": "/nix/store/krwwaljrhx0f8rykjbxzwhjqhn8iq64d-python3-3.13.12.drv",
       "description": "High-level dynamically-typed programming language",
       "install_id": "python3",
       "license": "Python-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
-      "name": "python3-3.13.13",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "python3-3.13.12",
       "pname": "python3",
-      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
-      "rev_count": 1027867,
-      "rev_date": "2026-07-05T04:06:12Z",
-      "scrape_date": "2026-07-06T03:13:37.148341Z",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T18:01:42.662619Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "3.13.13",
+      "version": "3.13.12",
       "outputs_to_install": [
+        "out",
+        "out",
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/mfkdmplffnbc0av8r6pknl796a6b1r2n-python3-3.13.13"
+        "out": "/nix/store/qabiwfbf61gaky68k0klvyjvd8zavmxb-python3-3.13.12"
       },
       "system": "aarch64-darwin",
       "group": "toplevel",
@@ -323,58 +464,63 @@
     {
       "attr_path": "python3",
       "broken": false,
-      "derivation": "/nix/store/v13czlpngkramf29nnn8qa0l4svfflwm-python3-3.13.13.drv",
+      "derivation": "/nix/store/nxvwxd34qjxfwm1cx3kpalrd6xcsydla-python3-3.13.12.drv",
       "description": "High-level dynamically-typed programming language",
       "install_id": "python3",
       "license": "Python-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
-      "name": "python3-3.13.13",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "python3-3.13.12",
       "pname": "python3",
-      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
-      "rev_count": 1027867,
-      "rev_date": "2026-07-05T04:06:12Z",
-      "scrape_date": "2026-07-06T03:42:22.923986Z",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T18:33:32.920212Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "3.13.13",
+      "version": "3.13.12",
+      "outputs_to_install": [
+        "out",
+        "out",
+        "out",
+        "out"
+      ],
+      "outputs": {
+        "debug": "/nix/store/q6kvsi3vgc4xvnp3yzibg03a22cw86r2-python3-3.13.12-debug",
+        "out": "/nix/store/nnz5k19wbai97d7y2x11qaq6dgxzhq4w-python3-3.13.12"
+      },
+      "system": "aarch64-linux",
+      "group": "toplevel",
+      "priority": 5
+    },
+    {
+      "attr_path": "python3",
+      "broken": false,
+      "derivation": "/nix/store/0bqzghzk3p5ss7wvxgfjw2k49wmiddkj-python3-3.13.12.drv",
+      "description": "High-level dynamically-typed programming language",
+      "install_id": "python3",
+      "license": "Python-2.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "python3-3.13.12",
+      "pname": "python3",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T19:02:57.136749Z",
+      "stabilities": [
+        "staging",
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "3.13.12",
       "outputs_to_install": [
         "out",
         "out"
       ],
       "outputs": {
-        "debug": "/nix/store/qfb6yj603w8qxd86j0cj7w54l1pv3rkz-python3-3.13.13-debug",
-        "out": "/nix/store/smwd56pl54f0pcjdspgh5vnf20c8xwsc-python3-3.13.13"
-      },
-      "system": "aarch64-linux",
-      "group": "toplevel",
-      "priority": 5
-    },
-    {
-      "attr_path": "python3",
-      "broken": false,
-      "derivation": "/nix/store/5vh9qfs54q47jybcd5zhxmap7lgk2dhg-python3-3.13.13.drv",
-      "description": "High-level dynamically-typed programming language",
-      "install_id": "python3",
-      "license": "Python-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
-      "name": "python3-3.13.13",
-      "pname": "python3",
-      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
-      "rev_count": 1027867,
-      "rev_date": "2026-07-05T04:06:12Z",
-      "scrape_date": "2026-07-06T04:09:53.021160Z",
-      "stabilities": [
-        "unstable"
-      ],
-      "unfree": false,
-      "version": "3.13.13",
-      "outputs_to_install": [
-        "out"
-      ],
-      "outputs": {
-        "out": "/nix/store/1137mc2md1ip5pdslybxl05kysjyh4rg-python3-3.13.13"
+        "out": "/nix/store/qcpx0pjlgkigibqijdy1wsy2kmc8shd2-python3-3.13.12"
       },
       "system": "x86_64-darwin",
       "group": "toplevel",
@@ -383,29 +529,35 @@
     {
       "attr_path": "python3",
       "broken": false,
-      "derivation": "/nix/store/d8rrzn9gg475brqyfpdaa3w76gzwmvx4-python3-3.13.13.drv",
+      "derivation": "/nix/store/makmgpqhagbsvfs49dywc7r7a0kv8any-python3-3.13.12.drv",
       "description": "High-level dynamically-typed programming language",
       "install_id": "python3",
       "license": "Python-2.0",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
-      "name": "python3-3.13.13",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "python3-3.13.12",
       "pname": "python3",
-      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
-      "rev_count": 1027867,
-      "rev_date": "2026-07-05T04:06:12Z",
-      "scrape_date": "2026-07-06T04:41:29.489145Z",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T19:37:34.343029Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "3.13.13",
+      "version": "3.13.12",
       "outputs_to_install": [
+        "out",
+        "out",
+        "out",
+        "out",
+        "out",
         "out",
         "out"
       ],
       "outputs": {
-        "debug": "/nix/store/g2pg1an3v5pm2fmwg1g7dw77ddpqirg7-python3-3.13.13-debug",
-        "out": "/nix/store/l9k0anq0z7zz81zcwy035jfwap9ga6rl-python3-3.13.13"
+        "debug": "/nix/store/nj0fy51wymai8wp1y7dbk08g6pvjw1a1-python3-3.13.12-debug",
+        "out": "/nix/store/pzdalg368npikvpq4ncz2saxnz19v53k-python3-3.13.12"
       },
       "system": "x86_64-linux",
       "group": "toplevel",
@@ -414,27 +566,28 @@
     {
       "attr_path": "temporal-cli",
       "broken": false,
-      "derivation": "/nix/store/7fk5fcgsayr73ss6hs7wx07pfq3grm5m-temporal-cli-1.7.2.drv",
+      "derivation": "/nix/store/s2wk8zqz22ya6955gr9l9mhv40rbhw5x-temporal-cli-1.6.1.drv",
       "description": "Command-line interface for running Temporal Server and interacting with Workflows, Activities, Namespaces, and other parts of Temporal",
       "install_id": "temporal-cli",
       "license": "MIT",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
-      "name": "temporal-cli-1.7.2",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "temporal-cli-1.6.1",
       "pname": "temporal-cli",
-      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
-      "rev_count": 1027867,
-      "rev_date": "2026-07-05T04:06:12Z",
-      "scrape_date": "2026-07-06T03:14:54.383078Z",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T18:02:53.176050Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "1.7.2",
+      "version": "1.6.1",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/n36aqf50v3h60a4k2ij6vpjv8bfscwdi-temporal-cli-1.7.2"
+        "out": "/nix/store/qz6rafsqd3011vvj75sqfa0a34g94vc8-temporal-cli-1.6.1"
       },
       "system": "aarch64-darwin",
       "group": "toplevel",
@@ -443,27 +596,28 @@
     {
       "attr_path": "temporal-cli",
       "broken": false,
-      "derivation": "/nix/store/s9hchp0j5ixnvg1lkjbsxsj7b691x50x-temporal-cli-1.7.2.drv",
+      "derivation": "/nix/store/ffl1lrdi01p6qijyprshwi7r7h2clqw2-temporal-cli-1.6.1.drv",
       "description": "Command-line interface for running Temporal Server and interacting with Workflows, Activities, Namespaces, and other parts of Temporal",
       "install_id": "temporal-cli",
       "license": "MIT",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
-      "name": "temporal-cli-1.7.2",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "temporal-cli-1.6.1",
       "pname": "temporal-cli",
-      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
-      "rev_count": 1027867,
-      "rev_date": "2026-07-05T04:06:12Z",
-      "scrape_date": "2026-07-06T03:43:55.102470Z",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T18:34:57.484382Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "1.7.2",
+      "version": "1.6.1",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/fvjbp6q9smsbid3mai9g7kph9s6i7c76-temporal-cli-1.7.2"
+        "out": "/nix/store/prd8v9vl6vgwxdb39y059p6zy5hp0i5r-temporal-cli-1.6.1"
       },
       "system": "aarch64-linux",
       "group": "toplevel",
@@ -472,27 +626,28 @@
     {
       "attr_path": "temporal-cli",
       "broken": false,
-      "derivation": "/nix/store/3yfrdf75j5ddh6rnlidbasabmq8jvvn9-temporal-cli-1.7.2.drv",
+      "derivation": "/nix/store/cdxlhh58pjdq1d56jlnzngkm0ka4c6li-temporal-cli-1.6.1.drv",
       "description": "Command-line interface for running Temporal Server and interacting with Workflows, Activities, Namespaces, and other parts of Temporal",
       "install_id": "temporal-cli",
       "license": "MIT",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
-      "name": "temporal-cli-1.7.2",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "temporal-cli-1.6.1",
       "pname": "temporal-cli",
-      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
-      "rev_count": 1027867,
-      "rev_date": "2026-07-05T04:06:12Z",
-      "scrape_date": "2026-07-06T04:11:28.377398Z",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T19:04:05.163783Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "1.7.2",
+      "version": "1.6.1",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/bh06550zmhadcmfn67a12265ppwzlnw1-temporal-cli-1.7.2"
+        "out": "/nix/store/d365hdq6d9mgqb5xi3xf5g2gg0v724cv-temporal-cli-1.6.1"
       },
       "system": "x86_64-darwin",
       "group": "toplevel",
@@ -501,27 +656,28 @@
     {
       "attr_path": "temporal-cli",
       "broken": false,
-      "derivation": "/nix/store/alm6xwg2izqq5y1qlm4sh07qdy5z5rfk-temporal-cli-1.7.2.drv",
+      "derivation": "/nix/store/83ybswckffdgra474bmbd2qgn77msc1g-temporal-cli-1.6.1.drv",
       "description": "Command-line interface for running Temporal Server and interacting with Workflows, Activities, Namespaces, and other parts of Temporal",
       "install_id": "temporal-cli",
       "license": "MIT",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
-      "name": "temporal-cli-1.7.2",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "name": "temporal-cli-1.6.1",
       "pname": "temporal-cli",
-      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
-      "rev_count": 1027867,
-      "rev_date": "2026-07-05T04:06:12Z",
-      "scrape_date": "2026-07-06T04:43:11.731369Z",
+      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
+      "rev_count": 972949,
+      "rev_date": "2026-04-01T09:47:46Z",
+      "scrape_date": "2026-04-02T19:39:05.274325Z",
       "stabilities": [
+        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "1.7.2",
+      "version": "1.6.1",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/0qjazcarm5k4gcyfxk6mcihvz8qsascd-temporal-cli-1.7.2"
+        "out": "/nix/store/ck8idrh274jpd98kzpvfjmlfnxp48410-temporal-cli-1.6.1"
       },
       "system": "x86_64-linux",
       "group": "toplevel",

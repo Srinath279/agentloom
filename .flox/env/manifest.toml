@@ -12,6 +12,8 @@ python3.version = ">=3.10"
 temporal-cli.pkg-path = "temporal-cli"
 grafana.pkg-path = "grafana"
 prometheus.pkg-path = "prometheus"
+grafana-loki.pkg-path = "grafana-loki"
+grafana-loki.version = "3.6.8"
 
 
 ## Environment Variables ---------------------------------------------
@@ -124,6 +126,7 @@ command = """
   until temporal operator cluster health --address localhost:7233 >/dev/null 2>&1; do
     sleep 1
   done
+  export WORKER_LOG_FILE="$FLOX_ENV_CACHE/worker.log"
   exec "$PYTHON_DIR/bin/python" worker.py
 """
 
@@ -135,6 +138,24 @@ command = """
     --config.file="$FLOX_ENV_PROJECT/observability/prometheus.yml" \
     --storage.tsdb.path="$FLOX_ENV_CACHE/prometheus-data" \
     --web.listen-address=localhost:9090
+"""
+
+# Loki: log storage on :3100, filesystem-backed (see observability/loki.yml)
+[services.loki]
+command = """
+  mkdir -p "$FLOX_ENV_CACHE/loki"
+  exec loki \
+    -config.file="$FLOX_ENV_PROJECT/observability/loki.yml" \
+    -config.expand-env=true
+"""
+
+# Promtail: tails the worker's log file and ships it into Loki
+[services.promtail]
+command = """
+  mkdir -p "$FLOX_ENV_CACHE/promtail"
+  exec promtail \
+    -config.file="$FLOX_ENV_PROJECT/observability/promtail.yml" \
+    -config.expand-env=true
 """
 
 # Langfuse: LLM tracing UI on :3001 (requires Docker Desktop to be running)
