@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+
+scrape_configs:
+  # Temporal dev server internals (started with --metrics-port 9091)
+  - job_name: temporal-server
+    static_configs:
+      - targets: ["localhost:9091"]
+
+  # AgentLoom Python worker (Temporal SDK metrics)
+  - job_name: agentloom-worker
+    static_configs:
+      - targets: ["localhost:9464"]
+
+  # Prometheus self-monitoring
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

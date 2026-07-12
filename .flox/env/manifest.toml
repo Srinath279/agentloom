@@ -10,6 +10,8 @@ schema-version = "1.13.0"
 python3.pkg-path = "python3"
 python3.version = ">=3.10"
 temporal-cli.pkg-path = "temporal-cli"
+grafana.pkg-path = "grafana"
+prometheus.pkg-path = "prometheus"
 
 
 ## Environment Variables ---------------------------------------------
@@ -92,7 +94,48 @@ zsh = """
 ##  $ flox activate --start-services  <- Activates & starts all
 ## ------------------------------------------------------------------
 [services]
-# myservice.command = "python3 -m http.server"
+
+# Temporal dev server: gRPC :7233, Web UI :8233, Prometheus metrics :9091
+[services.temporal]
+command = """
+  exec temporal server start-dev \
+    --metrics-port 9091 \
+    --db-filename "$FLOX_ENV_CACHE/temporal.db"
+"""
+
+# AgentLoom worker: exposes Temporal SDK metrics on :9464 (see worker.py)
+[services.worker]
+command = """
+  cd "$FLOX_ENV_PROJECT"
+  until temporal operator cluster health --address localhost:7233 >/dev/null 2>&1; do
+    sleep 1
+  done
+  exec "$PYTHON_DIR/bin/python" worker.py
+"""
+
+# Prometheus: scrapes temporal-server + worker, serves on :9090
+[services.prometheus]
+command = """
+  mkdir -p "$FLOX_ENV_CACHE/prometheus-data"
+  exec prometheus \
+    --config.file="$FLOX_ENV_PROJECT/observability/prometheus.yml" \
+    --storage.tsdb.path="$FLOX_ENV_CACHE/prometheus-data" \
+    --web.listen-address=localhost:9090
+"""
+
+# Grafana: dashboards on :3000, auto-provisioned datasource + Temporal dashboards
+[services.grafana]
+command = """
+  mkdir -p "$FLOX_ENV_CACHE/grafana/data" "$FLOX_ENV_CACHE/grafana/logs" "$FLOX_ENV_CACHE/grafana/plugins"
+  export GF_PATHS_DATA="$FLOX_ENV_CACHE/grafana/data"
+  export GF_PATHS_LOGS="$FLOX_ENV_CACHE/grafana/logs"
+  export GF_PATHS_PLUGINS="$FLOX_ENV_CACHE/grafana/plugins"
+  export GF_PATHS_PROVISIONING="$FLOX_ENV_PROJECT/observability/grafana/provisioning"
+  export AGENTLOOM_DASHBOARDS_DIR="$FLOX_ENV_PROJECT/observability/grafana/dashboards"
+  export GF_AUTH_ANONYMOUS_ENABLED=true
+  export GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+  exec grafana server --homepath "$FLOX_ENV/share/grafana"
+"""
 
 
 ## Include ----------------------------------------------------------

@@ -1,0 +1,13 @@
+apiVersion: 1
+
+providers:
+  - name: temporal
+    folder: Temporal
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      # Set by the grafana service in .flox/env/manifest.toml
+      path: ${AGENTLOOM_DASHBOARDS_DIR}
+      foldersFromFilesStructure: false
