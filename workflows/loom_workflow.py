@@ -12,6 +12,7 @@ exactly where it left off — no lost LLM calls, no duplicate spend.
 """
 
 import asyncio
+import os
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -23,8 +24,10 @@ from temporalio import workflow
 with workflow.unsafe.imports_passed_through():
     from activities import openai_responses
 
-MODEL = "anthropic/claude-haiku-4.5"
-LLM_TIMEOUT = timedelta(seconds=60)
+# Override via LLM_MODEL, e.g. "qwen2.5:14b-instruct" for a local Ollama model.
+MODEL = os.environ.get("LLM_MODEL", "anthropic/claude-haiku-4.5")
+# Local models on CPU/GPU are far slower per token than a hosted API.
+LLM_TIMEOUT = timedelta(seconds=180)
 
 
 @dataclass

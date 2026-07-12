@@ -1,7 +1,7 @@
 """Generic LLM activity, reusable by every agent in the loom.
 
-Calls Claude models through OpenRouter's OpenAI-compatible Chat Completions
-API.
+Calls any OpenAI-compatible Chat Completions API — OpenRouter by default,
+or a local server (e.g. Ollama) when LLM_BASE_URL is set.
 
 Temporal best practices applied here:
 - Request parameters live in a single dataclass.
@@ -16,7 +16,7 @@ import httpx
 from langfuse import get_client, propagate_attributes
 from temporalio import activity
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+DEFAULT_BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
 @dataclass
@@ -61,8 +61,9 @@ async def create(request: LLMResponsesRequest) -> str:
 
 
 async def _call_openrouter(request: LLMResponsesRequest) -> str:
-    api_key = os.environ.get("OPENROUTER_API_KEY")
-    if not api_key:
+    base_url = os.environ.get("LLM_BASE_URL", DEFAULT_BASE_URL)
+    api_key = os.environ.get("LLM_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
+    if not api_key and base_url == DEFAULT_BASE_URL:
         raise RuntimeError(
             "Missing OPENROUTER_API_KEY environment variable for the LLM activity."
         )
@@ -76,14 +77,15 @@ async def _call_openrouter(request: LLMResponsesRequest) -> str:
     }
     headers = {
         "content-type": "application/json",
-        "authorization": f"Bearer {api_key}",
         # Optional but recommended by OpenRouter for app attribution/rankings.
         "HTTP-Referer": "https://github.com/agentloom/agentloom",
         "X-Title": "AgentLoom",
     }
+    if api_key:
+        headers["authorization"] = f"Bearer {api_key}"
 
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.post(OPENROUTER_URL, json=payload, headers=headers)
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        response = await client.post(base_url, json=payload, headers=headers)
         response.raise_for_status()
         data = response.json()
 

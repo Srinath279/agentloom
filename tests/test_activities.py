@@ -50,6 +50,11 @@ class _FakeAsyncClient:
 
 @pytest.fixture
 def fake_llm(monkeypatch):
+    # Hermetic regardless of the developer's local .env (e.g. LLM_BASE_URL
+    # pointed at a local Ollama server) — tests always exercise the
+    # OpenRouter default path unless a test opts into overriding it.
+    monkeypatch.delenv("LLM_BASE_URL", raising=False)
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     monkeypatch.setattr(openai_responses.httpx, "AsyncClient", _FakeAsyncClient)
     return _FakeAsyncClient
@@ -75,10 +80,13 @@ async def test_create_returns_output_text(fake_llm):
     ]
     headers = fake_llm.last_request["headers"]
     assert headers["authorization"] == "Bearer test-key"
+    assert fake_llm.last_request["url"] == openai_responses.DEFAULT_BASE_URL
 
 
 async def test_create_raises_without_api_key(monkeypatch):
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
+    monkeypatch.delenv("LLM_BASE_URL", raising=False)
 
     env = ActivityEnvironment()
     with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY"):
@@ -86,6 +94,24 @@ async def test_create_raises_without_api_key(monkeypatch):
             openai_responses.create,
             LLMResponsesRequest(model="m", instructions="i", input="x"),
         )
+
+
+async def test_create_uses_llm_base_url_without_requiring_api_key(fake_llm, monkeypatch):
+    # A local model server (e.g. Ollama) needs no API key — only OpenRouter
+    # (the DEFAULT_BASE_URL) does.
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.setenv("LLM_BASE_URL", "http://localhost:11434/v1/chat/completions")
+    fake_llm.payload = {"choices": [{"message": {"role": "assistant", "content": "hi"}}]}
+
+    env = ActivityEnvironment()
+    result = await env.run(
+        openai_responses.create,
+        LLMResponsesRequest(model="qwen2.5:14b-instruct", instructions="i", input="x"),
+    )
+
+    assert result == "hi"
+    assert fake_llm.last_request["url"] == "http://localhost:11434/v1/chat/completions"
+    assert "authorization" not in fake_llm.last_request["headers"]
 
 
 async def test_create_raises_on_unparseable_response(fake_llm):
