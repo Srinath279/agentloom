@@ -1,9 +1,12 @@
-"""Generic Claude/Anthropic activity, reusable by every agent in the loom.
+"""Generic LLM activity, reusable by every agent in the loom.
+
+Calls Claude models through OpenRouter's OpenAI-compatible Chat Completions
+API.
 
 Temporal best practices applied here:
 - Request parameters live in a single dataclass.
-- The activity performs a direct Claude HTTP request so Temporal owns retry
-  and timeout semantics.
+- The activity performs a direct HTTP request (no client-side retries) so
+  Temporal owns retry and timeout semantics.
 """
 
 import os
@@ -12,6 +15,8 @@ from dataclasses import dataclass
 import httpx
 from langfuse import get_client, propagate_attributes
 from temporalio import activity
+
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
 @dataclass
@@ -47,7 +52,7 @@ async def create(request: LLMResponsesRequest) -> str:
             },
         ) as generation:
             try:
-                output_text = await _call_claude(request)
+                output_text = await _call_openrouter(request)
             except Exception as e:
                 generation.update(level="ERROR", status_message=str(e))
                 raise
@@ -55,63 +60,43 @@ async def create(request: LLMResponsesRequest) -> str:
             return output_text
 
 
-async def _call_claude(request: LLMResponsesRequest) -> str:
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+async def _call_openrouter(request: LLMResponsesRequest) -> str:
+    api_key = os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
         raise RuntimeError(
-            "Missing ANTHROPIC_API_KEY environment variable for Claude activity."
+            "Missing OPENROUTER_API_KEY environment variable for the LLM activity."
         )
 
     payload = {
         "model": request.model,
-        "input": f"{request.instructions}\n\n{request.input}",
+        "messages": [
+            {"role": "system", "content": request.instructions},
+            {"role": "user", "content": request.input},
+        ],
     }
     headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}",
+        "content-type": "application/json",
+        "authorization": f"Bearer {api_key}",
+        # Optional but recommended by OpenRouter for app attribution/rankings.
+        "HTTP-Referer": "https://github.com/agentloom/agentloom",
+        "X-Title": "AgentLoom",
     }
 
     async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.post(
-            "https://api.anthropic.com/v1/responses",
-            json=payload,
-            headers=headers,
-        )
+        response = await client.post(OPENROUTER_URL, json=payload, headers=headers)
         response.raise_for_status()
         data = response.json()
 
-    output_text = _claude_output_text(data)
+    output_text = _openrouter_output_text(data)
     if not output_text:
-        raise RuntimeError(f"Unexpected Claude response format: {data}")
+        raise RuntimeError(f"Unexpected OpenRouter response format: {data}")
     return output_text
 
 
-def _claude_output_text(data: dict) -> str:
-    if output := data.get("output"):
-        if isinstance(output, list):
-            texts: list[str] = []
-            for part in output:
-                if isinstance(part, dict):
-                    if part.get("type") == "output_text":
-                        texts.append(part.get("text", ""))
-                    elif isinstance(part.get("content"), list):
-                        for chunk in part["content"]:
-                            if chunk.get("type") == "output_text":
-                                texts.append(chunk.get("text", ""))
-            if texts:
-                return "".join(texts)
-    if completion := data.get("completion"):
-        if isinstance(completion, dict):
-            message = completion.get("message", {})
-            content = message.get("content", [])
-            texts: list[str] = []
-            if isinstance(content, list):
-                for item in content:
-                    if item.get("type") == "output_text":
-                        texts.append(item.get("text", ""))
-            if texts:
-                return "".join(texts)
-    if text := data.get("output_text"):
-        return text
+def _openrouter_output_text(data: dict) -> str:
+    choices = data.get("choices")
+    if isinstance(choices, list) and choices:
+        content = choices[0].get("message", {}).get("content")
+        if isinstance(content, str):
+            return content
     return ""

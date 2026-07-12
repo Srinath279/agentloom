@@ -18,7 +18,7 @@ class HelloWorld:
         result = await workflow.execute_activity(
             openai_responses.create,
             openai_responses.LLMResponsesRequest(
-                model="haike",
+                model="anthropic/claude-haiku-4.5",
                 instructions="You only respond in haikus.",
                 input=input,
             ),

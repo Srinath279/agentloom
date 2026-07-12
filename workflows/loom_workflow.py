@@ -23,7 +23,7 @@ from temporalio import workflow
 with workflow.unsafe.imports_passed_through():
     from activities import openai_responses
 
-MODEL = "haike"
+MODEL = "anthropic/claude-haiku-4.5"
 LLM_TIMEOUT = timedelta(seconds=60)
 
 
