@@ -17,9 +17,13 @@ from datetime import timedelta
 
 from temporalio import workflow
 
-from activities import openai_responses
+# The activities module imports httpx/langfuse, which the deterministic
+# workflow sandbox rejects; pass it through — the workflow only needs the
+# activity reference and its request dataclass.
+with workflow.unsafe.imports_passed_through():
+    from activities import openai_responses
 
-MODEL = "gpt-4o-mini"
+MODEL = "haike"
 LLM_TIMEOUT = timedelta(seconds=60)
 
 
@@ -33,16 +37,15 @@ class LoomResult:
 @workflow.defn
 class LoomWorkflow:
     async def _agent(self, instructions: str, input: str) -> str:
-        result = await workflow.execute_activity(
+        return await workflow.execute_activity(
             openai_responses.create,
-            openai_responses.OpenAIResponsesRequest(
+            openai_responses.LLMResponsesRequest(
                 model=MODEL,
                 instructions=instructions,
                 input=input,
             ),
             start_to_close_timeout=LLM_TIMEOUT,
         )
-        return result.output_text
 
     @workflow.run
     async def run(self, topic: str) -> LoomResult:

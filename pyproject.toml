@@ -8,6 +8,7 @@ dependencies = [
     "temporalio>=1.9.0",
     "pydantic>=2.0",
     "httpx>=0.28.0",
+    "langfuse>=3.0",
 ]
 
 [dependency-groups]

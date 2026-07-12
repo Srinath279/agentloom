@@ -19,7 +19,11 @@ prometheus.pkg-path = "prometheus"
 ##      as well as [hook], [profile] scripts and [services] below.
 ## -------------------------------------------------------------------
 [vars]
-# INTRO_MESSAGE = "It's gettin' Flox in here"
+# Langfuse (local docker-compose stack, web UI on :3001).
+# Local-dev keys seeded via observability/langfuse/.env — not real secrets.
+LANGFUSE_HOST = "http://localhost:3001"
+LANGFUSE_PUBLIC_KEY = "pk-lf-agentloom-local"
+LANGFUSE_SECRET_KEY = "sk-lf-agentloom-local"
 
 
 ## Activation Hook ---------------------------------------------------
@@ -121,6 +125,12 @@ command = """
     --config.file="$FLOX_ENV_PROJECT/observability/prometheus.yml" \
     --storage.tsdb.path="$FLOX_ENV_CACHE/prometheus-data" \
     --web.listen-address=localhost:9090
+"""
+
+# Langfuse: LLM tracing UI on :3001 (requires Docker Desktop to be running)
+[services.langfuse]
+command = """
+  exec docker compose -f "$FLOX_ENV_PROJECT/observability/langfuse/docker-compose.yml" up
 """
 
 # Grafana: dashboards on :3000, auto-provisioned datasource + Temporal dashboards
