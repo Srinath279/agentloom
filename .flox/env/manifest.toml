@@ -11,9 +11,14 @@ python3.pkg-path = "python3"
 python3.version = ">=3.10"
 temporal-cli.pkg-path = "temporal-cli"
 grafana.pkg-path = "grafana"
+grafana.version = "13.0.3"
+grafana.pkg-group = "grafana"
 prometheus.pkg-path = "prometheus"
 grafana-loki.pkg-path = "grafana-loki"
 grafana-loki.version = "3.6.8"
+grafana-alloy.pkg-path = "grafana-alloy"
+grafana-alloy.version = "1.16.0"
+grafana-alloy.pkg-group = "alloy"
 
 
 ## Environment Variables ---------------------------------------------
@@ -149,13 +154,13 @@ command = """
     -config.expand-env=true
 """
 
-# Promtail: tails the worker's log file and ships it into Loki
-[services.promtail]
+# Alloy: tails the worker's log file and ships it into Loki
+[services.alloy]
 command = """
-  mkdir -p "$FLOX_ENV_CACHE/promtail"
-  exec promtail \
-    -config.file="$FLOX_ENV_PROJECT/observability/promtail.yml" \
-    -config.expand-env=true
+  mkdir -p "$FLOX_ENV_CACHE/alloy"
+  exec alloy run "$FLOX_ENV_PROJECT/observability/alloy.alloy" \
+    --storage.path="$FLOX_ENV_CACHE/alloy" \
+    --server.http.listen-addr=127.0.0.1:12345
 """
 
 # Langfuse: LLM tracing UI on :3001 (requires Docker Desktop to be running)

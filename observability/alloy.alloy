@@ -1,0 +1,18 @@
+local.file_match "worker_log" {
+  path_targets = [{
+    __path__ = env("FLOX_ENV_CACHE") + "/worker.log",
+    job       = "agentloom-worker",
+    service   = "worker",
+  }]
+}
+
+loki.source.file "worker" {
+  targets    = local.file_match.worker_log.targets
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://localhost:3100/loki/api/v1/push"
+  }
+}

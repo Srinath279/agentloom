@@ -24,7 +24,7 @@ flowchart TB
             direction LR
             P["Prometheus :9090"] -->|"datasource"| G["Grafana :3000"]
             L["Loki :3100"] -->|"datasource"| G
-            PT["Promtail"] -->|"push"| L
+            PT["Alloy"] -->|"push"| L
             LF["Langfuse (docker compose)\nweb :3001"]
         end
 
@@ -76,7 +76,7 @@ the diagram runs regardless of which LLM backend is configured.
    counts, task-queue backlog, etc.) are exposed on `:9464` and the Temporal
    server's internal metrics on `:9091`. Prometheus scrapes both every 10s;
    Grafana renders them via the pre-provisioned dashboards. In parallel, the
-   worker's own log lines are written to a file that Promtail tails and pushes
+   worker's own log lines are written to a file that Alloy tails and pushes
    into Loki, so they're searchable in Grafana too (see
    [docs/services/loki.md](services/loki.md)).
 

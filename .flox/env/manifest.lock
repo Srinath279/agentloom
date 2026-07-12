@@ -4,7 +4,14 @@
     "schema-version": "1.13.0",
     "install": {
       "grafana": {
-        "pkg-path": "grafana"
+        "pkg-path": "grafana",
+        "pkg-group": "grafana",
+        "version": "13.0.3"
+      },
+      "grafana-alloy": {
+        "pkg-path": "grafana-alloy",
+        "pkg-group": "alloy",
+        "version": "1.16.0"
       },
       "grafana-loki": {
         "pkg-path": "grafana-loki",
@@ -37,6 +44,9 @@
     },
     "options": {},
     "services": {
+      "alloy": {
+        "command": "  mkdir -p \"$FLOX_ENV_CACHE/alloy\"\n  exec alloy run \"$FLOX_ENV_PROJECT/observability/alloy.alloy\" --storage.path=\"$FLOX_ENV_CACHE/alloy\" --server.http.listen-addr=127.0.0.1:12345\n"
+      },
       "grafana": {
         "command": "  mkdir -p \"$FLOX_ENV_CACHE/grafana/data\" \"$FLOX_ENV_CACHE/grafana/logs\" \"$FLOX_ENV_CACHE/grafana/plugins\"\n  export GF_PATHS_DATA=\"$FLOX_ENV_CACHE/grafana/data\"\n  export GF_PATHS_LOGS=\"$FLOX_ENV_CACHE/grafana/logs\"\n  export GF_PATHS_PLUGINS=\"$FLOX_ENV_CACHE/grafana/plugins\"\n  export GF_PATHS_PROVISIONING=\"$FLOX_ENV_PROJECT/observability/grafana/provisioning\"\n  export AGENTLOOM_DASHBOARDS_DIR=\"$FLOX_ENV_PROJECT/observability/grafana/dashboards\"\n  export GF_AUTH_ANONYMOUS_ENABLED=true\n  export GF_AUTH_ANONYMOUS_ORG_ROLE=Admin\n  exec grafana server --homepath \"$FLOX_ENV/share/grafana\"\n"
       },
@@ -49,9 +59,6 @@
       "prometheus": {
         "command": "  mkdir -p \"$FLOX_ENV_CACHE/prometheus-data\"\n  exec prometheus --config.file=\"$FLOX_ENV_PROJECT/observability/prometheus.yml\" --storage.tsdb.path=\"$FLOX_ENV_CACHE/prometheus-data\" --web.listen-address=localhost:9090\n"
       },
-      "promtail": {
-        "command": "  mkdir -p \"$FLOX_ENV_CACHE/promtail\"\n  exec promtail -config.file=\"$FLOX_ENV_PROJECT/observability/promtail.yml\" -config.expand-env=true\n"
-      },
       "temporal": {
         "command": "  exec temporal server start-dev --metrics-port 9091 --db-filename \"$FLOX_ENV_CACHE/temporal.db\"\n"
       },
@@ -62,123 +69,235 @@
   },
   "packages": [
     {
-      "attr_path": "grafana",
+      "attr_path": "grafana-alloy",
       "broken": false,
-      "derivation": "/nix/store/n8lpgk65d2k4zw455vn23sbklk14rms2-grafana-12.4.2.drv",
-      "description": "Gorgeous metric viz, dashboards & editors for Graphite, InfluxDB & OpenTSDB",
-      "install_id": "grafana",
-      "license": "AGPL-3.0-only",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
-      "name": "grafana-12.4.2",
-      "pname": "grafana",
-      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
-      "rev_count": 972949,
-      "rev_date": "2026-04-01T09:47:46Z",
-      "scrape_date": "2026-04-02T18:01:04.722091Z",
+      "derivation": "/nix/store/9zgshvc99xmhaalf5cbqxx4vsm2syfbh-grafana-alloy-1.16.0.drv",
+      "description": "OpenTelemetry Collector distribution with programmable pipelines",
+      "install_id": "grafana-alloy",
+      "license": "Apache-2.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
+      "name": "grafana-alloy-1.16.0",
+      "pname": "grafana-alloy",
+      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
+      "rev_count": 1027867,
+      "rev_date": "2026-07-05T04:06:12Z",
+      "scrape_date": "2026-07-06T03:12:56.368783Z",
       "stabilities": [
-        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "12.4.2",
+      "version": "1.16.0",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/02gqqcyz6jzarlxhdh3sz5r8jym9ss3k-grafana-12.4.2"
+        "out": "/nix/store/0iq8ry9isx341fxgawaxw9mfgkpcgwp7-grafana-alloy-1.16.0"
       },
       "system": "aarch64-darwin",
-      "group": "toplevel",
+      "group": "alloy",
       "priority": 5
     },
     {
-      "attr_path": "grafana",
+      "attr_path": "grafana-alloy",
       "broken": false,
-      "derivation": "/nix/store/nqg24gyd381i1niy4lqsikxr98icy02a-grafana-12.4.2.drv",
-      "description": "Gorgeous metric viz, dashboards & editors for Graphite, InfluxDB & OpenTSDB",
-      "install_id": "grafana",
-      "license": "AGPL-3.0-only",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
-      "name": "grafana-12.4.2",
-      "pname": "grafana",
-      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
-      "rev_count": 972949,
-      "rev_date": "2026-04-01T09:47:46Z",
-      "scrape_date": "2026-04-02T18:32:37.785485Z",
+      "derivation": "/nix/store/p1zd3kiyrn93bmrplvlj7xpjs1i9lg9l-grafana-alloy-1.16.0.drv",
+      "description": "OpenTelemetry Collector distribution with programmable pipelines",
+      "install_id": "grafana-alloy",
+      "license": "Apache-2.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
+      "name": "grafana-alloy-1.16.0",
+      "pname": "grafana-alloy",
+      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
+      "rev_count": 1027867,
+      "rev_date": "2026-07-05T04:06:12Z",
+      "scrape_date": "2026-07-06T03:41:24.120878Z",
       "stabilities": [
-        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "12.4.2",
+      "version": "1.16.0",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/i5jzhr24npmqfirvf65px1fkhnqy2rwd-grafana-12.4.2"
+        "out": "/nix/store/f85w6pjllm3aqicdcgzvqxz8glxsmwh8-grafana-alloy-1.16.0"
       },
       "system": "aarch64-linux",
-      "group": "toplevel",
+      "group": "alloy",
       "priority": 5
     },
     {
-      "attr_path": "grafana",
+      "attr_path": "grafana-alloy",
       "broken": false,
-      "derivation": "/nix/store/z722pkdzrqqwj8iyzpx4hf7mm1s3klc6-grafana-12.4.2.drv",
-      "description": "Gorgeous metric viz, dashboards & editors for Graphite, InfluxDB & OpenTSDB",
-      "install_id": "grafana",
-      "license": "AGPL-3.0-only",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
-      "name": "grafana-12.4.2",
-      "pname": "grafana",
-      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
-      "rev_count": 972949,
-      "rev_date": "2026-04-01T09:47:46Z",
-      "scrape_date": "2026-04-02T19:02:19.597631Z",
+      "derivation": "/nix/store/hp8ncq5h1klm7djadh5035ps4a2c83bj-grafana-alloy-1.16.0.drv",
+      "description": "OpenTelemetry Collector distribution with programmable pipelines",
+      "install_id": "grafana-alloy",
+      "license": "Apache-2.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
+      "name": "grafana-alloy-1.16.0",
+      "pname": "grafana-alloy",
+      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
+      "rev_count": 1027867,
+      "rev_date": "2026-07-05T04:06:12Z",
+      "scrape_date": "2026-07-06T04:09:02.000133Z",
       "stabilities": [
-        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "12.4.2",
+      "version": "1.16.0",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/gpr0j8cdack71hl9pk19zkfpz9k3h3kd-grafana-12.4.2"
+        "out": "/nix/store/9y7ljyx7xz9ihgrj9r9rp0s8vhjg935x-grafana-alloy-1.16.0"
       },
       "system": "x86_64-darwin",
-      "group": "toplevel",
+      "group": "alloy",
+      "priority": 5
+    },
+    {
+      "attr_path": "grafana-alloy",
+      "broken": false,
+      "derivation": "/nix/store/yqzfg92p6wkkc989h484rdbyyak0fxig-grafana-alloy-1.16.0.drv",
+      "description": "OpenTelemetry Collector distribution with programmable pipelines",
+      "install_id": "grafana-alloy",
+      "license": "Apache-2.0",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
+      "name": "grafana-alloy-1.16.0",
+      "pname": "grafana-alloy",
+      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
+      "rev_count": 1027867,
+      "rev_date": "2026-07-05T04:06:12Z",
+      "scrape_date": "2026-07-06T04:40:26.951974Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "1.16.0",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/p20p3x6mcwkb99ilz3y2izhi6215dd5r-grafana-alloy-1.16.0"
+      },
+      "system": "x86_64-linux",
+      "group": "alloy",
       "priority": 5
     },
     {
       "attr_path": "grafana",
       "broken": false,
-      "derivation": "/nix/store/cddralhim5dgdq1ccha5v7cj8a2shava-grafana-12.4.2.drv",
+      "derivation": "/nix/store/ixf0xhf46g10ld2hsqk1v4hpyirb042f-grafana-13.0.3.drv",
       "description": "Gorgeous metric viz, dashboards & editors for Graphite, InfluxDB & OpenTSDB",
       "install_id": "grafana",
       "license": "AGPL-3.0-only",
-      "locked_url": "https://github.com/flox/nixpkgs?rev=6201e203d09599479a3b3450ed24fa81537ebc4e",
-      "name": "grafana-12.4.2",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
+      "name": "grafana-13.0.3",
       "pname": "grafana",
-      "rev": "6201e203d09599479a3b3450ed24fa81537ebc4e",
-      "rev_count": 972949,
-      "rev_date": "2026-04-01T09:47:46Z",
-      "scrape_date": "2026-04-02T19:36:34.128033Z",
+      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
+      "rev_count": 1027867,
+      "rev_date": "2026-07-05T04:06:12Z",
+      "scrape_date": "2026-07-06T03:12:56.368432Z",
       "stabilities": [
-        "staging",
         "unstable"
       ],
       "unfree": false,
-      "version": "12.4.2",
+      "version": "13.0.3",
       "outputs_to_install": [
         "out"
       ],
       "outputs": {
-        "out": "/nix/store/drbdd19y84nx9c4zksiig3vjzmdbi4vl-grafana-12.4.2"
+        "out": "/nix/store/al3cfrlw6zff7sr68il9rr1z24anxfhm-grafana-13.0.3"
+      },
+      "system": "aarch64-darwin",
+      "group": "grafana",
+      "priority": 5
+    },
+    {
+      "attr_path": "grafana",
+      "broken": false,
+      "derivation": "/nix/store/llx7mn392x0iy9vyzikl93sl85csz986-grafana-13.0.3.drv",
+      "description": "Gorgeous metric viz, dashboards & editors for Graphite, InfluxDB & OpenTSDB",
+      "install_id": "grafana",
+      "license": "AGPL-3.0-only",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
+      "name": "grafana-13.0.3",
+      "pname": "grafana",
+      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
+      "rev_count": 1027867,
+      "rev_date": "2026-07-05T04:06:12Z",
+      "scrape_date": "2026-07-06T03:41:24.120407Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "13.0.3",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/zaahjbwlkigl7b5247aaf5jg869x59i8-grafana-13.0.3"
+      },
+      "system": "aarch64-linux",
+      "group": "grafana",
+      "priority": 5
+    },
+    {
+      "attr_path": "grafana",
+      "broken": false,
+      "derivation": "/nix/store/chw46lk4ya247w17axnspgx7117vnbgd-grafana-13.0.3.drv",
+      "description": "Gorgeous metric viz, dashboards & editors for Graphite, InfluxDB & OpenTSDB",
+      "install_id": "grafana",
+      "license": "AGPL-3.0-only",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
+      "name": "grafana-13.0.3",
+      "pname": "grafana",
+      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
+      "rev_count": 1027867,
+      "rev_date": "2026-07-05T04:06:12Z",
+      "scrape_date": "2026-07-06T04:09:01.999594Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "13.0.3",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/g5i0y94hv1ydnaxnfqf4y3x4cpj7b75d-grafana-13.0.3"
+      },
+      "system": "x86_64-darwin",
+      "group": "grafana",
+      "priority": 5
+    },
+    {
+      "attr_path": "grafana",
+      "broken": false,
+      "derivation": "/nix/store/zads7dvx00mh0d9jm0q7fr2g5pq5c6ar-grafana-13.0.3.drv",
+      "description": "Gorgeous metric viz, dashboards & editors for Graphite, InfluxDB & OpenTSDB",
+      "install_id": "grafana",
+      "license": "AGPL-3.0-only",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
+      "name": "grafana-13.0.3",
+      "pname": "grafana",
+      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
+      "rev_count": 1027867,
+      "rev_date": "2026-07-05T04:06:12Z",
+      "scrape_date": "2026-07-06T04:40:26.951499Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "13.0.3",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/cxwvzm7b2f0cfq5slddrqmpkssap0vmp-grafana-13.0.3"
       },
       "system": "x86_64-linux",
-      "group": "toplevel",
+      "group": "grafana",
       "priority": 5
     },
     {
