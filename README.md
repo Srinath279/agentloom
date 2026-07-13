@@ -7,100 +7,6 @@ LLM agents: each agent is a thread, Temporal is the loom, and the workflow is th
 fabric — durable, resumable, and observable. If a worker crashes mid-pipeline,
 execution resumes exactly where it left off. No lost LLM calls, no duplicate spend.
 
-LLM calls go through [OpenRouter](https://openrouter.ai) (an OpenAI-compatible
-proxy in front of Claude and other model providers). Every call is also traced
-end-to-end: [Langfuse](https://langfuse.com) captures
-the prompts/outputs, [Prometheus](https://prometheus.io) + [Grafana](https://grafana.com)
-capture the Temporal execution metrics, and the whole local stack — Temporal, the
-worker, Prometheus, Grafana, and Langfuse — is orchestrated by [Flox](https://flox.dev)
-as a single set of services.
-
-## Architecture
-
-```
-                              ┌─────────────────────────────────────────┐
-                              │              Flox environment             │
-                              │  (flox services start/stop/status)       │
-                              └─────────────────────────────────────────┘
-                                                  │ manages
-        ┌─────────────────────────────────────────┼─────────────────────────────────────────┐
-        │                                          │                                          │
-        ▼                                          ▼                                          ▼
-┌───────────────────┐                    ┌───────────────────┐                    ┌───────────────────┐
-│  Temporal server   │◀──gRPC :7233──────│  AgentLoom worker  │──HTTPS───▶ OpenRouter
-│  (dev mode)        │   Web UI :8233     │  (worker.py)        │           (proxies to Claude)
-│  metrics :9091      │                    │  SDK metrics :9464  │
-└─────────┬──────────┘                    └─────────┬──────────┘
-          │ scraped by                               │ scraped by, and traces sent by
-          ▼                                          ▼
-┌───────────────────┐                    ┌───────────────────────────┐
-│    Prometheus       │◀── scrapes both ──│   Langfuse (docker compose) │
-│    :9090             │                   │   web :3001, worker :3030,  │
-└─────────┬──────────┘                    │   postgres/clickhouse/redis/ │
-          │ datasource                     │   minio (internal ports)     │
-          ▼                                └───────────────────────────┘
-┌───────────────────┐
-│      Grafana        │
-│      :3000           │
-└───────────────────┘
-
-CLI: start_workflow.py ──executes workflow──▶ Temporal ──schedules activity──▶ worker
-```
-
-**Request flow:** `start_workflow.py` submits a `LoomWorkflow` run to Temporal.
-Temporal schedules each agent step as an *activity* on the worker's task queue.
-The worker picks up the activity, calls the LLM, records a Langfuse generation for
-it, and returns the result to Temporal — which durably records it in workflow
-history before scheduling the next step. Prometheus scrapes metrics from both
-Temporal server and the worker; Grafana visualizes them.
-
-See [docs/architecture.md](docs/architecture.md) for a deeper walkthrough of the
-data flow and design decisions.
-
-## Services
-
-| Service | What it is | Port(s) | Docs |
-|---|---|---|---|
-| Temporal | Durable execution engine — the "loom" that schedules and persists every workflow/activity step | gRPC `7233`, Web UI `8233`, metrics `9091` | [docs/services/temporal.md](docs/services/temporal.md) |
-| Worker | Python process hosting the workflow + activity code (`worker.py`) | SDK metrics `9464` | [docs/services/worker.md](docs/services/worker.md) |
-| Activities | The generic LLM-calling activity all agents share (`activities/openai_responses.py`) | — | [docs/services/activities.md](docs/services/activities.md) |
-| Workflows | The orchestration logic — `HelloWorld` and `LoomWorkflow` (`workflows/`) | — | [docs/services/workflows.md](docs/services/workflows.md) |
-| Prometheus | Scrapes and stores metrics from Temporal server + the worker | `9090` | [docs/services/prometheus.md](docs/services/prometheus.md) |
-| Grafana | Dashboards over the Prometheus metrics | `3000` | [docs/services/grafana.md](docs/services/grafana.md) |
-| Langfuse | LLM observability — traces every prompt/response per workflow run | web `3001`, worker `3030` | [docs/services/langfuse.md](docs/services/langfuse.md) |
-| Flox | Environment + service manager tying all of the above together | — | [docs/services/flox.md](docs/services/flox.md) |
-
-## What's inside
-
-| File | Purpose |
-|---|---|
-| `activities/openai_responses.py` | One generic LLM activity, reused by every agent, instrumented with Langfuse |
-| `workflows/hello_world_workflow.py` | Single-agent starter (haiku bot) |
-| `workflows/loom_workflow.py` | Multi-agent pipeline: parallel researchers → writer → critic |
-| `worker.py` | Hosts workflows + activities on the `agentloom-task-queue`, exposes Prometheus metrics |
-| `start_workflow.py` | Submits a run and prints the final brief |
-| `observability/` | Prometheus config, Grafana dashboards/provisioning, Langfuse docker-compose stack |
-| `.flox/env/manifest.toml` | Declares the dev environment and every service (`temporal`, `worker`, `prometheus`, `grafana`, `langfuse`) |
-| `tests/` | Unit tests for the activity (mocked HTTP) and workflows (Temporal time-skipping test server) |
-
-## Design decisions (Temporal best practices)
-
-- **Retries belong to Temporal, not the SDK.** The activity makes a raw HTTP
-  call with a short client-side timeout; Temporal's retry policy owns backoff
-  and recovery.
-- **Pydantic data converter** on both client and worker, so activity
-  request/response types serialize cleanly through workflow history.
-- **One generic activity, many agents.** Agents differ only by their
-  instructions — the pipeline stays declarative inside the workflow.
-- **Parallel fan-out with `asyncio.gather`** inside the workflow: Temporal
-  schedules the researcher activities concurrently and records both results
-  deterministically.
-- **`workflow.unsafe.imports_passed_through()`** around the activities import,
-  because `activities/openai_responses.py` imports `httpx`/`langfuse`, which
-  the deterministic workflow sandbox rejects at workflow-code load time.
-
-## The pipeline
-
 ```
                 ┌──────────────────┐
         ┌──────▶│ Researcher (facts)│──┐
@@ -111,87 +17,130 @@ data flow and design decisions.
                 └──────────────────┘
 ```
 
-## Quick start
+LLM calls go through any OpenAI-compatible endpoint —
+[OpenRouter](https://openrouter.ai) by default, or a local server like Ollama.
+Every call is traced ([Langfuse](https://langfuse.com)), every execution is
+measured ([Prometheus](https://prometheus.io) + [Grafana](https://grafana.com)),
+and the whole local stack is one command via [Flox](https://flox.dev).
 
-Everything — Temporal, the worker, Prometheus, Grafana, and Langfuse — is
-declared as a [Flox](https://flox.dev) service, so spinning up the full stack
-is one command.
+## Repository layout
 
-1. **Prerequisites:**
-   - [Flox](https://flox.dev/docs/install-flox/) installed
-   - [Docker](https://docs.docker.com/get-docker/) running (Langfuse's stack
-     runs via `docker compose` under the hood)
-   - An [OpenRouter](https://openrouter.ai/keys) API key (see `.env.example`)
+```
+src/agentloom/          the application package
+├── config.py           core env-driven settings, defined once
+├── agents/             declarative agent templates (AgentSpec + catalog)
+├── activities/         non-deterministic work (the shared LLM activity)
+├── workflows/          deterministic orchestration (HelloWorld, LoomWorkflow,
+│                       ChatWorkflow — durable interactive chat)
+├── api/                FastAPI control plane for the chat UI
+├── worker.py           hosts ALL workflows + activities  → agentloom-worker
+├── cli.py              submits a loom run                → agentloom-run
+└── tools/ memory/ skills/    reserved for roadmap features
 
-2. **Set your API key** (in `.env`, or exported in your shell — see
-   [docs/services/activities.md](docs/services/activities.md) for why `.env`
-   alone isn't picked up automatically):
+frontend/               React chat UI (Vite, :5173)
 
-   ```sh
-   export OPENROUTER_API_KEY=sk-or-v1-...
-   ```
+deploy/
+├── docker/Dockerfile   worker image (multi-stage, non-root)
+└── k8s/                Kustomize base + dev/prod overlays
 
-3. **Activate the environment and start every service:**
+observability/          local Prometheus/Grafana/Loki/Alloy/Langfuse configs
+docs/                   architecture, per-service reference, deployment, roadmap
+tests/                  activity/workflow tests
+```
+
+**The reusable template:** an agent is just an `AgentSpec` (name +
+instructions + optional model override) in
+[src/agentloom/agents/catalog.py](src/agentloom/agents/catalog.py). Every
+agent runs through the same LLM activity; workflows compose specs. Adding an
+agent = one spec + one `self._run_agent(...)` call. New workflows/activities
+register themselves by joining the `ALL_WORKFLOWS` / `ALL_ACTIVITIES` lists.
+
+## Quick start (local)
+
+1. **Prerequisites:** [Flox](https://flox.dev/docs/install-flox/),
+   [Docker](https://docs.docker.com/get-docker/) (for Langfuse), and an
+   [OpenRouter API key](https://openrouter.ai/keys) — or a local
+   [Ollama](https://ollama.com) server instead (see `.env.example`).
+
+2. **Configure:** copy `.env.example` to `.env` and set `OPENROUTER_API_KEY`.
+
+3. **Start everything** (Temporal, worker, Prometheus, Grafana, Loki, Alloy,
+   Langfuse):
 
    ```sh
    flox activate --start-services
+   flox services status   # confirm all Running
    ```
 
-   This installs Python deps into a project-local venv, then starts:
-   `temporal` → `worker` (waits for Temporal to be healthy) → `prometheus` →
-   `grafana` → `langfuse` (via `docker compose up`).
-
-4. **Check everything is up:**
+4. **Run a workflow** (second terminal, `flox activate` there too):
 
    ```sh
-   flox services status
+   uv run python -m agentloom.cli "Vector databases"
    ```
 
-5. **Kick off a workflow** (from another terminal, inside the Flox env — run
-   `flox activate` there too):
+5. **Watch it:** Temporal UI <http://localhost:8233> · Grafana
+   <http://localhost:3000> · Langfuse <http://localhost:3001>.
 
-   ```sh
-   uv run python -m start_workflow "Vector databases"
-   ```
+Full walkthrough (including crash-recovery demo and running without Flox):
+[docs/e2e-testing.md](docs/e2e-testing.md).
 
-6. **Watch it happen:**
-   - Temporal Web UI — <http://localhost:8233> — step-by-step workflow/activity
-     history. Kill the worker mid-run (`flox services stop worker`) and
-     restart it (`flox services start worker`) to see durable execution pick
-     up exactly where it stopped.
-   - Grafana — <http://localhost:3000> — Temporal server + SDK dashboards
-     (anonymous admin access, pre-provisioned).
-   - Langfuse — <http://localhost:3001> — every LLM call as a generation,
-     grouped into one trace per workflow run (local dev login seeded from
-     `observability/langfuse/.env`).
+## The chat UI
 
-For the full step-by-step spin-up → run → verify → teardown walkthrough
-(including running without Flox), see
-**[docs/e2e-testing.md](docs/e2e-testing.md)**.
+The React frontend is a chat interface backed by durable agents: each
+conversation is a `ChatWorkflow` (messages are Temporal signals, the
+transcript is workflow state), so a chat survives page reloads and worker
+crashes, and every reply is traced in Langfuse under the chat's session.
 
-## Running tests
+```sh
+flox activate --start-services   # also starts the api and frontend services
+open http://localhost:5173       # ask anything — first message starts a session
+```
+
+## Deploying to Kubernetes
+
+The worker is stateless and scales horizontally — dev and prod are Kustomize
+overlays over one base:
+
+```sh
+docker build -f deploy/docker/Dockerfile -t <registry>/agentloom-worker:dev .
+kubectl -n agentloom-dev create secret generic agentloom-secrets \
+  --from-literal=OPENROUTER_API_KEY=sk-or-v1-...
+kubectl apply -k deploy/k8s/overlays/dev     # or overlays/prod
+```
+
+See [docs/deployment/kubernetes.md](docs/deployment/kubernetes.md) for
+Temporal server options, scaling signals, and production notes.
+
+## Tests
 
 ```sh
 uv run pytest
 ```
 
-- `tests/test_activities.py` — the activity's HTTP call is mocked; no
-  Temporal server or network access required.
-- `tests/test_workflows.py` — runs real workflow code against Temporal's
-  in-process time-skipping test server, with the `create` activity replaced
-  by a scripted fake (so no LLM calls, but real Temporal scheduling/retry
-  semantics).
+Activity tests mock the HTTP layer; workflow tests run real orchestration
+code against Temporal's in-process time-skipping test server. No network or
+API key needed.
 
-## Extending the loom
+## Design decisions (Temporal best practices)
 
-- Add a new agent: one more `self._agent(...)` call in `loom_workflow.py`.
-- Add a new provider: drop another generic activity next to
-  `openai_responses.py` and register it in `worker.py`.
-- Human in the loop: use Temporal signals to pause the loom for approval
-  between the writer and critic steps.
+- **Retries belong to Temporal, not the SDK** — the activity makes one raw
+  HTTP call; Temporal's retry policy owns backoff and recovery.
+- **Determinism boundary** — workflows are deterministic; all I/O lives in
+  activities (hence `workflow.unsafe.imports_passed_through()` around the
+  activity import).
+- **One generic activity, many agents** — agents differ only by their spec;
+  the pipeline stays declarative inside the workflow.
+- **Config defined once** — task queue, addresses, model, and timeouts live
+  in [src/agentloom/config.py](src/agentloom/config.py) and are driven by the
+  same env vars locally (`.env` via Flox) and in-cluster (ConfigMap/Secret).
+- **Tracing follows the workflow, not the process** — Langfuse sessions key
+  off `workflow_id`, so retries on other workers land in the same trace.
 
 ## Documentation
 
-- [docs/architecture.md](docs/architecture.md) — full architecture + data flow
-- [docs/e2e-testing.md](docs/e2e-testing.md) — spin up every service and run an end-to-end test
-- Per-service docs: [Temporal](docs/services/temporal.md) · [Worker](docs/services/worker.md) · [Activities](docs/services/activities.md) · [Workflows](docs/services/workflows.md) · [Prometheus](docs/services/prometheus.md) · [Grafana](docs/services/grafana.md) · [Langfuse](docs/services/langfuse.md) · [Flox](docs/services/flox.md)
+Everything lives under [docs/](docs/README.md):
+[architecture](docs/architecture.md) ·
+[local e2e guide](docs/e2e-testing.md) ·
+[Kubernetes deployment](docs/deployment/kubernetes.md) ·
+[roadmap](docs/roadmap.md) (sandboxing, MCP tools, agent memory, skills) ·
+per-service reference in [docs/services/](docs/README.md#per-service-reference)

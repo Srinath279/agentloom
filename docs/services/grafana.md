@@ -42,7 +42,7 @@ with zero manual setup after `flox services start`.
 **Open it:** <http://localhost:3000> → Dashboards → Temporal folder.
 
 **During a test run**, watch `temporal-sdk.json` for activity latency and
-retry counts while `start_workflow.py` runs — you'll see the researcher
+retry counts while `src/agentloom/cli.py` runs — you'll see the researcher
 activities' concurrent execution and each subsequent step's latency in real
 time.
 

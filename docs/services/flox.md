@@ -73,7 +73,7 @@ history or Grafana dashboards edits.
   restart`) silently lose it.
 - **Service commands should wait on their dependencies, not assume ordering.**
   See how `services.worker` polls `temporal operator cluster health` before
-  launching `worker.py` — Flox starts services concurrently, it does not
+  launching `src/agentloom/worker.py` — Flox starts services concurrently, it does not
   infer a dependency graph for you.
 - **Treat `.flox/cache/` as disposable state, not source.** It's local dev
   data (Temporal's dev-server DB, Grafana/Prometheus data dirs) — safe to

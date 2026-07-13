@@ -19,6 +19,9 @@ grafana-loki.version = "3.6.8"
 grafana-alloy.pkg-path = "grafana-alloy"
 grafana-alloy.version = "1.16.0"
 grafana-alloy.pkg-group = "alloy"
+# Node for the chat frontend (Vite)
+nodejs.pkg-path = "nodejs_22"
+nodejs.pkg-group = "node"
 
 
 ## Environment Variables ---------------------------------------------
@@ -124,7 +127,7 @@ command = """
     --db-filename "$FLOX_ENV_CACHE/temporal.db"
 """
 
-# AgentLoom worker: exposes Temporal SDK metrics on :9464 (see worker.py)
+# AgentLoom worker: hosts the loom workflows, SDK metrics on :9464
 [services.worker]
 command = """
   cd "$FLOX_ENV_PROJECT"
@@ -132,7 +135,23 @@ command = """
     sleep 1
   done
   export WORKER_LOG_FILE="$FLOX_ENV_CACHE/worker.log"
-  exec "$PYTHON_DIR/bin/python" worker.py
+  exec "$PYTHON_DIR/bin/python" -m agentloom.worker
+"""
+
+# Chat API on :8000
+[services.api]
+command = """
+  cd "$FLOX_ENV_PROJECT"
+  exec "$PYTHON_DIR/bin/python" -m agentloom.api.serve
+"""
+
+# Chat UI (Vite dev server) on :5173
+[services.frontend]
+command = """
+  cd "$FLOX_ENV_PROJECT/frontend"
+  [ -d node_modules ] || npm install --no-audit --no-fund
+  export VITE_API_PROXY_TARGET=http://localhost:8000
+  exec npm run dev
 """
 
 # Prometheus: scrapes temporal-server + worker, serves on :9090

@@ -1,4 +1,4 @@
-# Workflows (`workflows/`)
+# Workflows (`src/agentloom/workflows/`)
 
 ## What it is
 
@@ -6,9 +6,9 @@ The orchestration layer — plain Python classes decorated with
 `@workflow.defn` that describe *what agents run, in what order, with what
 data flowing between them*. Two workflows exist today:
 
-- **`HelloWorld`** (`workflows/hello_world_workflow.py`) — one activity call,
+- **`HelloWorld`** (`src/agentloom/workflows/hello_world.py`) — one activity call,
   a haiku bot. The minimal example of "a workflow."
-- **`LoomWorkflow`** (`workflows/loom_workflow.py`) — the actual multi-agent
+- **`LoomWorkflow`** (`src/agentloom/workflows/loom.py`) — the actual multi-agent
   pipeline:
 
   ```
@@ -24,14 +24,16 @@ data flowing between them*. Two workflows exist today:
   Two researcher activities fan out in parallel via `asyncio.gather`, a
   writer agent weaves their notes into a draft, and a critic agent produces
   the final version. Every agent is the *same* underlying activity
-  (`openai_responses.create`) called with different `instructions` —see
+  (`llm.run_llm`) called with a different `AgentSpec` — a declarative
+  template (name + instructions + model) from
+  `src/agentloom/agents/catalog.py`. See
   [docs/services/activities.md](activities.md).
 
 ## Why we need it
 
 This is where the "multi-agent pipeline" actually lives as a readable,
 declarative shape — `asyncio.gather(...)` for parallel steps, plain
-`await self._agent(...)` for sequential ones. Because it's real Python inside
+`await self._run_agent(...)` for sequential ones. Because it's real Python inside
 Temporal's deterministic sandbox, the pipeline topology is versionable,
 diffable, and testable the same way any other code is, while Temporal handles
 everything about *durability* (crash recovery, retries, timeouts) transparently
@@ -39,17 +41,19 @@ underneath.
 
 ## How to use it effectively
 
-**Add a new agent to the existing pipeline:** add another
-`self._agent(instructions, input)` call and wire its output into the next
+**Add a new agent to the existing pipeline:** define an `AgentSpec` in
+`src/agentloom/agents/catalog.py`, then add one
+`self._run_agent(spec, input)` call and wire its output into the next
 step — no new activity code needed (see
 [docs/services/activities.md](activities.md)).
 
 **Add a new pipeline:** define a new `@workflow.defn` class in a new file
-under `workflows/`, then register it in `worker.py`'s `workflows=[...]` list
-and call it from a client (like `start_workflow.py` does for `LoomWorkflow`).
+under `src/agentloom/workflows/`, add it to `ALL_WORKFLOWS` in
+`src/agentloom/workflows/__init__.py` (the worker registers that list),
+and call it from a client (like `src/agentloom/cli.py` does for `LoomWorkflow`).
 
-**Test it without hitting a real LLM:** replace the `create` activity with a
-scripted fake registered under the *same activity name* (`@activity.defn(name="create")`)
+**Test it without hitting a real LLM:** replace the `run_llm` activity with a
+scripted fake registered under the *same activity name* (`@activity.defn(name="run_llm")`)
 when constructing the test `Worker` — see
 [`tests/test_workflows.py`](../../tests/test_workflows.py). This runs actual
 workflow scheduling/retry logic against Temporal's in-process time-skipping
@@ -67,12 +71,13 @@ a flag, which is itself durable (a crash while paused loses nothing).
   `random`, no direct `httpx`/file I/O, no un-seeded dict/set iteration order
   dependencies. Anything like that belongs in an activity. Non-deterministic
   imports must be wrapped in `workflow.unsafe.imports_passed_through()`
-  exactly as `openai_responses` is here — importing `httpx`/`langfuse`
+  exactly as `llm` is here — importing `httpx`/`langfuse`
   directly at module scope inside a workflow file will fail sandbox checks.
 - **Every `execute_activity` call needs a `start_to_close_timeout`.** Both
-  workflows set one explicitly (30s for `HelloWorld`, 60s via `LLM_TIMEOUT`
-  for `LoomWorkflow`) — an activity call without a timeout can hang a
-  workflow indefinitely.
+  workflows set one explicitly (30s for `HelloWorld`,
+  `config.LLM_ACTIVITY_TIMEOUT` — 180s by default, sized for local model
+  latency — for `LoomWorkflow`) — an activity call without a timeout can
+  hang a workflow indefinitely.
 - **Use `asyncio.gather` for true fan-out, plain `await` for dependencies.**
   `LoomWorkflow` only parallelizes the two researcher calls because neither
   depends on the other's output; the writer and critic are sequential because
@@ -82,10 +87,10 @@ a flag, which is itself durable (a crash while paused loses nothing).
   `@dataclass` with `research_notes`, `draft`, `final`) makes intermediate
   state inspectable from the Temporal Web UI and from calling code — prefer
   this over collapsing everything into the final string only.
-- **Model identifiers are a workflow-level constant** (`MODEL` at the top of
-  `loom_workflow.py`/inline in `hello_world_workflow.py`) — keep them there,
-  not buried in activity code, so swapping models is a one-line, obviously-
-  reviewable change.
+- **Model identifiers live in configuration, not activity code.** The default
+  comes from `LLM_MODEL` (`src/agentloom/config.py`); an individual agent can
+  override it via its `AgentSpec.model` field. Swapping models is a one-line,
+  obviously-reviewable change.
 
 ## Related links
 

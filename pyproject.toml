@@ -5,11 +5,18 @@ description = "Durable multi-agent workflows woven together with Temporal"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "temporalio>=1.9.0",
-    "pydantic>=2.0",
+    "temporalio>=1.17.0,<2",
+    "pydantic>=2.10.6,<3",
     "httpx>=0.28.0",
     "langfuse>=3.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
 ]
+
+[project.scripts]
+agentloom-worker = "agentloom.worker:run"
+agentloom-run = "agentloom.cli:run"
+agentloom-api = "agentloom.api.serve:run"
 
 [dependency-groups]
 dev = [
@@ -20,11 +27,12 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = ["e2e: end-to-end smoke tests requiring the API + full stack running"]
+addopts = "-m 'not e2e'"
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["workflows", "activities"]
-py-modules = ["worker", "start_workflow"]
+[tool.setuptools.packages.find]
+where = ["src"]

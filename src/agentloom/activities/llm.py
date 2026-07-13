@@ -7,63 +7,44 @@ Temporal best practices applied here:
 - Request parameters live in a single dataclass.
 - The activity performs a direct HTTP request (no client-side retries) so
   Temporal owns retry and timeout semantics.
+
+Environment is read at call time (not import time) so each activity attempt
+sees the current configuration and tests can monkeypatch it.
 """
 
 import os
 from dataclasses import dataclass
 
 import httpx
-from langfuse import get_client, propagate_attributes
 from temporalio import activity
 
-DEFAULT_BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
+from agentloom import config, tracing
 
 
 @dataclass
-class LLMResponsesRequest:
+class LLMRequest:
     model: str
     instructions: str
     input: str
 
 
 @activity.defn
-async def create(request: LLMResponsesRequest) -> str:
-    info = activity.info()
-    langfuse = get_client()
-
-    # One generation per LLM call, grouped into a session per workflow run
-    # so all agent steps of a LoomWorkflow show up as one thread in Langfuse.
-    with propagate_attributes(
-        session_id=info.workflow_id,
-        trace_name=info.workflow_type,
-        tags=["temporal", "agentloom"],
-    ):
-        with langfuse.start_as_current_observation(
-            name=f"{info.workflow_type}.{info.activity_type}",
-            as_type="generation",
-            model=request.model,
-            input={"instructions": request.instructions, "input": request.input},
-            metadata={
-                "workflow_id": info.workflow_id,
-                "run_id": info.workflow_run_id,
-                "activity_id": info.activity_id,
-                "attempt": info.attempt,
-                "task_queue": info.task_queue,
-            },
-        ) as generation:
-            try:
-                output_text = await _call_openrouter(request)
-            except Exception as e:
-                generation.update(level="ERROR", status_message=str(e))
-                raise
-            generation.update(output=output_text)
-            return output_text
+async def run_llm(request: LLMRequest) -> str:
+    # One Langfuse generation per LLM call, grouped into one session per
+    # workflow run — the convention lives in agentloom.tracing.
+    with tracing.llm_generation(
+        model=request.model,
+        input={"instructions": request.instructions, "input": request.input},
+    ) as generation:
+        output_text = await _call_chat_completions(request)
+        generation.update(output=output_text)
+        return output_text
 
 
-async def _call_openrouter(request: LLMResponsesRequest) -> str:
-    base_url = os.environ.get("LLM_BASE_URL", DEFAULT_BASE_URL)
+async def _call_chat_completions(request: LLMRequest) -> str:
+    base_url = os.environ.get("LLM_BASE_URL", config.DEFAULT_LLM_BASE_URL)
     api_key = os.environ.get("LLM_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
-    if not api_key and base_url == DEFAULT_BASE_URL:
+    if not api_key and base_url == config.DEFAULT_LLM_BASE_URL:
         raise RuntimeError(
             "Missing OPENROUTER_API_KEY environment variable for the LLM activity."
         )
@@ -89,13 +70,13 @@ async def _call_openrouter(request: LLMResponsesRequest) -> str:
         response.raise_for_status()
         data = response.json()
 
-    output_text = _openrouter_output_text(data)
+    output_text = _chat_output_text(data)
     if not output_text:
-        raise RuntimeError(f"Unexpected OpenRouter response format: {data}")
+        raise RuntimeError(f"Unexpected chat completions response format: {data}")
     return output_text
 
 
-def _openrouter_output_text(data: dict) -> str:
+def _chat_output_text(data: dict) -> str:
     choices = data.get("choices")
     if isinstance(choices, list) and choices:
         content = choices[0].get("message", {}).get("content")

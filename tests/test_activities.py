@@ -2,15 +2,16 @@
 
 ActivityEnvironment runs the activity function directly while still
 providing activity.info(), heartbeats, and cancellation semantics.
-The OpenRouter HTTP call is faked by monkeypatching httpx.AsyncClient.
+The chat-completions HTTP call is faked by monkeypatching httpx.AsyncClient.
 """
 
 import httpx
 import pytest
 from temporalio.testing import ActivityEnvironment
 
-from activities import openai_responses
-from activities.openai_responses import LLMResponsesRequest, _openrouter_output_text
+from agentloom import config
+from agentloom.activities import llm
+from agentloom.activities.llm import LLMRequest, _chat_output_text
 
 
 class _FakeResponse:
@@ -56,19 +57,19 @@ def fake_llm(monkeypatch):
     monkeypatch.delenv("LLM_BASE_URL", raising=False)
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
-    monkeypatch.setattr(openai_responses.httpx, "AsyncClient", _FakeAsyncClient)
+    monkeypatch.setattr(llm.httpx, "AsyncClient", _FakeAsyncClient)
     return _FakeAsyncClient
 
 
-async def test_create_returns_output_text(fake_llm):
+async def test_run_llm_returns_output_text(fake_llm):
     fake_llm.payload = {
         "choices": [{"message": {"role": "assistant", "content": "line one\nline two"}}]
     }
 
     env = ActivityEnvironment()
     result = await env.run(
-        openai_responses.create,
-        LLMResponsesRequest(model="test-model", instructions="Be brief.", input="hi"),
+        llm.run_llm,
+        LLMRequest(model="test-model", instructions="Be brief.", input="hi"),
     )
 
     assert result == "line one\nline two"
@@ -80,10 +81,10 @@ async def test_create_returns_output_text(fake_llm):
     ]
     headers = fake_llm.last_request["headers"]
     assert headers["authorization"] == "Bearer test-key"
-    assert fake_llm.last_request["url"] == openai_responses.DEFAULT_BASE_URL
+    assert fake_llm.last_request["url"] == config.DEFAULT_LLM_BASE_URL
 
 
-async def test_create_raises_without_api_key(monkeypatch):
+async def test_run_llm_raises_without_api_key(monkeypatch):
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     monkeypatch.delenv("LLM_BASE_URL", raising=False)
@@ -91,22 +92,22 @@ async def test_create_raises_without_api_key(monkeypatch):
     env = ActivityEnvironment()
     with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY"):
         await env.run(
-            openai_responses.create,
-            LLMResponsesRequest(model="m", instructions="i", input="x"),
+            llm.run_llm,
+            LLMRequest(model="m", instructions="i", input="x"),
         )
 
 
-async def test_create_uses_llm_base_url_without_requiring_api_key(fake_llm, monkeypatch):
+async def test_run_llm_uses_llm_base_url_without_requiring_api_key(fake_llm, monkeypatch):
     # A local model server (e.g. Ollama) needs no API key — only OpenRouter
-    # (the DEFAULT_BASE_URL) does.
+    # (the DEFAULT_LLM_BASE_URL) does.
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     monkeypatch.setenv("LLM_BASE_URL", "http://localhost:11434/v1/chat/completions")
     fake_llm.payload = {"choices": [{"message": {"role": "assistant", "content": "hi"}}]}
 
     env = ActivityEnvironment()
     result = await env.run(
-        openai_responses.create,
-        LLMResponsesRequest(model="qwen2.5:14b-instruct", instructions="i", input="x"),
+        llm.run_llm,
+        LLMRequest(model="qwen2.5:14b-instruct", instructions="i", input="x"),
     )
 
     assert result == "hi"
@@ -114,21 +115,21 @@ async def test_create_uses_llm_base_url_without_requiring_api_key(fake_llm, monk
     assert "authorization" not in fake_llm.last_request["headers"]
 
 
-async def test_create_raises_on_unparseable_response(fake_llm):
+async def test_run_llm_raises_on_unparseable_response(fake_llm):
     fake_llm.payload = {"something": "unexpected"}
 
     env = ActivityEnvironment()
-    with pytest.raises(RuntimeError, match="Unexpected OpenRouter response format"):
+    with pytest.raises(RuntimeError, match="Unexpected chat completions response format"):
         await env.run(
-            openai_responses.create,
-            LLMResponsesRequest(model="m", instructions="i", input="x"),
+            llm.run_llm,
+            LLMRequest(model="m", instructions="i", input="x"),
         )
 
 
-def test_openrouter_output_text_parses_message_content():
+def test_chat_output_text_parses_message_content():
     data = {"choices": [{"message": {"role": "assistant", "content": "a b"}}]}
-    assert _openrouter_output_text(data) == "a b"
+    assert _chat_output_text(data) == "a b"
 
 
-def test_openrouter_output_text_empty_on_unknown_shape():
-    assert _openrouter_output_text({"foo": "bar"}) == ""
+def test_chat_output_text_empty_on_unknown_shape():
+    assert _chat_output_text({"foo": "bar"}) == ""

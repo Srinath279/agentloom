@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentloom-worker-metrics
+  labels:
+    app.kubernetes.io/name: agentloom
+spec:
+  selector:
+    app.kubernetes.io/name: agentloom
+  ports:
+    - name: metrics
+      port: 9464
+      targetPort: metrics

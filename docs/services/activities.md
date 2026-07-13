@@ -1,9 +1,9 @@
-# Activities (`activities/openai_responses.py`)
+# Activities (`src/agentloom/activities/`)
 
 ## What it is
 
 The single Temporal **activity** every agent in AgentLoom calls:
-`openai_responses.create`. It takes an `LLMResponsesRequest` (`model`,
+`llm.run_llm`. It takes an `LLMRequest` (`model`,
 `instructions`, `input`), makes a direct HTTP(S) call to an OpenAI-compatible
 Chat Completions API, and returns the response text as a plain `str`. It also
 wraps the call in a Langfuse `generation` span for tracing.
@@ -17,13 +17,13 @@ with `LLM_MODEL=qwen2.5:14b-instruct`). No code change needed either way.
 
 ```python
 @dataclass
-class LLMResponsesRequest:
+class LLMRequest:
     model: str
     instructions: str
     input: str
 
 @activity.defn
-async def create(request: LLMResponsesRequest) -> str:
+async def create(request: LLMRequest) -> str:
     ...
 ```
 
@@ -53,37 +53,38 @@ means writing new I/O code, only new `instructions` text in a workflow.
    server like Ollama needs none. Raises immediately if OpenRouter is being
    used without a key (a clear, activity-level failure rather than a cryptic
    HTTP 401).
-2. Opens a Langfuse observation (`start_as_current_observation(...,
-   as_type="generation")`), tagged with the owning workflow's ID as
-   `session_id` — this is what makes every agent step of one workflow run
-   show up as a single trace in Langfuse, regardless of which worker process
-   or retry attempt executed it (see [docs/services/langfuse.md](langfuse.md)).
+2. Opens a Langfuse generation via `agentloom.tracing.llm_generation(...)` —
+   the shared tracing layer tags it with the owning workflow's ID as
+   `session_id`, which is what makes every agent step of one workflow run
+   show up as a single session in Langfuse, regardless of which worker
+   process or retry attempt executed it (see
+   [docs/services/langfuse.md](langfuse.md)).
 3. Calls `POST <LLM_BASE_URL>` directly via `httpx.AsyncClient(timeout=120.0)`
    — note **no client-side retries** — with `instructions` sent as the
    `system` message and `input` as the `user` message. The timeout is
    generous because local model inference (CPU/GPU-bound) is far slower
    per token than a hosted API.
-4. Parses the response (`_openrouter_output_text`) — expects the standard
+4. Parses the response (`_chat_output_text`) — expects the standard
    OpenAI-shaped `choices[0].message.content` — and raises `RuntimeError` if
    that's missing, so a format change fails loudly instead of returning an
    empty string.
-5. On any exception, marks the Langfuse generation as an error before
-   re-raising — so failed calls are visible in Langfuse, not just in Temporal
-   history.
+5. On any exception, `llm_generation` marks the Langfuse generation as an
+   error before re-raising — so failed calls are visible in Langfuse, not
+   just in Temporal history.
 
 ## How to use it effectively
 
-**Reuse it, don't fork it.** To add a new agent, call
-`self._agent(instructions, input)` in a workflow (see
-[docs/services/workflows.md](workflows.md)) rather than writing a new
-activity — the instructions string *is* the agent definition.
+**Reuse it, don't fork it.** To add a new agent, define an `AgentSpec` in
+`src/agentloom/agents/catalog.py` and call `self._run_agent(spec, input)` in
+a workflow (see [docs/services/workflows.md](workflows.md)) rather than
+writing a new activity — the spec *is* the agent definition.
 
 **Swap models via the `model` field, not new code.** Because this activity
 speaks the OpenAI-compatible shape that both OpenRouter and local servers
 like Ollama implement, changing which model an agent uses is just changing
-the `model` string passed into `LLMResponsesRequest` — driven by the
-`LLM_MODEL` env var read into the `MODEL` constant in
-`workflows/loom_workflow.py` — plus, if switching providers, `LLM_BASE_URL`.
+the `model` string passed into `LLMRequest` — driven by the
+`LLM_MODEL` env var (read in `src/agentloom/config.py`, overridable per
+agent via `AgentSpec.model`) — plus, if switching providers, `LLM_BASE_URL`.
 Check [openrouter.ai/models](https://openrouter.ai/models) or
 `GET https://openrouter.ai/api/v1/models` for OpenRouter slugs, or
 `ollama list` for locally-pulled model names.
@@ -91,10 +92,10 @@ Check [openrouter.ai/models](https://openrouter.ai/models) or
 **Add a genuinely different activity shape alongside it, don't branch inside
 it.** If you need a provider OpenRouter doesn't proxy, or need
 provider-specific features OpenRouter's OpenAI-compatible shape doesn't
-expose, drop a sibling module (e.g. `activities/openai_chat.py`) with its own
-`create`-style activity and request dataclass, and register it in
-`worker.py`. Keeps each activity's retry/timeout/parsing semantics
-independent.
+expose, drop a sibling module (e.g. `src/agentloom/activities/anthropic.py`)
+with its own activity and request dataclass, and add it to `ALL_ACTIVITIES`
+in `src/agentloom/activities/__init__.py`. Keeps each activity's
+retry/timeout/parsing semantics independent.
 
 **Tune the timeout at the workflow call site, not here.** The 120s httpx
 timeout is a *safety net* inside the activity; the timeout that actually
@@ -108,23 +109,24 @@ timing out under load, look at both.
   for an official provider SDK, disable its built-in retries — double retry
   layers make backoff and failure semantics unpredictable and can multiply
   spend.
-- **Fail loudly on unexpected shapes.** `_openrouter_output_text` raising
+- **Fail loudly on unexpected shapes.** `_chat_output_text` raising
   `RuntimeError(f"Unexpected OpenRouter response format: {data}")` rather
   than silently returning `""` is deliberate — a silent empty string would
   propagate into the pipeline as a plausible-looking (wrong) result.
 - **Keep secrets in the activity, never in the workflow.** `LLM_API_KEY`/
   `OPENROUTER_API_KEY` is read here, not passed through workflow arguments —
   workflow arguments are persisted in plaintext in Temporal's event history.
-- **`.env` is not auto-loaded by `worker.py`.** There's no dotenv dependency
+- **`.env` is not auto-loaded by `src/agentloom/worker.py`.** There's no dotenv dependency
   in this repo — `LLM_BASE_URL`/`LLM_MODEL`/`OPENROUTER_API_KEY` only reach
   the worker process if something sources `.env` into its environment before
   it starts. This project's Flox `on-activate` hook does that (see
   [docs/services/flox.md](flox.md)); if you run the worker outside Flox,
   you're responsible for exporting it yourself.
-- **One generation per LLM call, one session per workflow run.** If you add
-  fields to the Langfuse metadata, keep including `workflow_id`/`run_id`/
-  `activity_id`/`attempt` — they're what make a failed-then-retried activity
-  traceable back to a specific Temporal history event.
+- **One generation per LLM call, one session per workflow run.** The
+  attribution (`workflow_id`/`run_id`/`activity_id`/`attempt` metadata) is
+  centralized in `agentloom.tracing` — extend it there, not per activity, so
+  a failed-then-retried call stays traceable to its exact Temporal history
+  event everywhere.
 
 ## Related links
 

@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentloom-worker
+spec:
+  # Workers are stateless pollers of the Temporal task queue — scale
+  # horizontally by raising replicas (overlays set per-env values).
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: agentloom
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: agentloom
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9464"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: worker
+          image: agentloom-worker:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: agentloom-config
+            - secretRef:
+                name: agentloom-secrets
+          ports:
+            - name: metrics
+              containerPort: 9464
+          # The metrics endpoint only comes up once the worker connected to
+          # Temporal and started its runtime, so it doubles as a health signal.
+          startupProbe:
+            tcpSocket:
+              port: metrics
+            failureThreshold: 30
+            periodSeconds: 2
+          livenessProbe:
+            tcpSocket:
+              port: metrics
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

@@ -27,10 +27,10 @@ export OPENROUTER_API_KEY=sk-or-v1-...
 or put it in a gitignored `.env` file at the repo root — the project's Flox
 `on-activate` hook sources `.env` into the activated environment (see
 [docs/services/flox.md](services/flox.md)), which is what makes it reach the
-`worker` service. `worker.py` itself has no dotenv loading, so a bare `.env`
+`worker` service. `src/agentloom/worker.py` itself has no dotenv loading, so a bare `.env`
 file with nothing sourcing it does nothing.
 
-The activity (`activities/openai_responses.py`) reads
+The activity (`src/agentloom/activities/llm.py`) reads
 `OPENROUTER_API_KEY` directly from the environment and fails fast with a
 clear error if it's unset — see
 [docs/services/activities.md](services/activities.md).
@@ -55,7 +55,7 @@ This runs Flox's `on-activate` hook (creates/updates a project-local venv,
 each service's own command:
 
 1. `temporal` — Temporal dev server (gRPC `7233`, Web UI `8233`, metrics `9091`)
-2. `worker` — waits for `temporal operator cluster health` to succeed, then runs `worker.py`
+2. `worker` — waits for `temporal operator cluster health` to succeed, then runs `src/agentloom/worker.py`
 3. `prometheus` — scrapes `temporal` + `worker` metrics on `9090`
 4. `grafana` — dashboards on `3000`, auto-provisioned
 5. `langfuse` — `docker compose up` for the full Langfuse stack (web `3001`, worker `3030`, plus Postgres/ClickHouse/Redis/MinIO)
@@ -96,7 +96,7 @@ uv run pytest
 - `tests/test_activities.py` mocks the HTTP call — verifies the activity's
   request/response handling without a real API key or network access.
 - `tests/test_workflows.py` runs the actual workflow code against Temporal's
-  in-process time-skipping test server, with the `create` activity replaced
+  in-process time-skipping test server, with the `run_llm` activity replaced
   by a scripted fake — verifies orchestration logic (fan-out, sequencing,
   retry-on-failure) without any LLM calls.
 
@@ -108,7 +108,7 @@ With the full stack up and `OPENROUTER_API_KEY` exported, submit a real run
 (from a second terminal — run `flox activate` there too so `uv` is on `PATH`):
 
 ```sh
-uv run python -m start_workflow "Vector databases"
+uv run python -m agentloom.cli "Vector databases"
 ```
 
 This connects to Temporal, starts `LoomWorkflow`, and blocks until the full
@@ -121,7 +121,7 @@ seconds, dominated by LLM latency.
 **Temporal Web UI** — <http://localhost:8233>
 
 - Find the workflow by ID (`loom-<uuid>`, printed nowhere by
-  `start_workflow.py` today — search "Recent workflows" and match by start
+  `src/agentloom/cli.py` today — search "Recent workflows" and match by start
   time, or add a `print(f"workflow id: {id}")` locally if you need it).
 - Confirm: `WorkflowExecutionStarted` → 4 `ActivityTaskScheduled`/
   `ActivityTaskCompleted` pairs (2 researchers, writer, critic) → the writer's
@@ -149,7 +149,7 @@ lose work:
 
 ```sh
 flox services stop worker
-uv run python -m start_workflow "Durable execution" &
+uv run python -m agentloom.cli "Durable execution" &
 sleep 2
 flox services start worker
 ```
@@ -182,7 +182,7 @@ terminal, in this order:
 temporal server start-dev --metrics-port 9091
 
 # 2. Worker (after Temporal is healthy)
-uv run python -m worker
+uv run python -m agentloom.worker
 
 # 3. Prometheus
 prometheus --config.file=observability/prometheus.yml --web.listen-address=localhost:9090
@@ -207,7 +207,7 @@ a specific reason not to use Flox.
 | `worker` service stuck / never becomes healthy | Temporal isn't reachable yet | `flox services logs temporal`; `temporal operator cluster health --address localhost:7233` |
 | Activity fails with "Missing OPENROUTER_API_KEY" | Var not in the environment the `worker` service was started with — either it was never set, or it was added/changed *after* the service manager already captured its environment | Set it in `.env` or export it, then do a full `flox services stop` + `flox activate --start-services` (a plain `flox services restart worker` reuses the stale captured environment — see the callout in [step 1](#1-set-your-api-key)) |
 | Activity fails with `401 Unauthorized` from `openrouter.ai` | The key value itself is invalid, revoked, or malformed — this is a credentials problem, not a code problem | Regenerate a key at [openrouter.ai/keys](https://openrouter.ai/keys); confirm it's the exact value in `.env` (no stray whitespace/quotes) |
-| Activity fails with `404 Not Found` / model errors from `openrouter.ai` | The `MODEL` constant in `workflows/loom_workflow.py`/`hello_world_workflow.py` isn't a valid OpenRouter model slug | Check `GET https://openrouter.ai/api/v1/models` or [openrouter.ai/models](https://openrouter.ai/models) for the exact slug (e.g. `anthropic/claude-haiku-4.5`) |
+| Activity fails with `404 Not Found` / model errors from `openrouter.ai` | The configured `LLM_MODEL` (see `src/agentloom/config.py`) isn't a valid OpenRouter model slug | Check `GET https://openrouter.ai/api/v1/models` or [openrouter.ai/models](https://openrouter.ai/models) for the exact slug (e.g. `anthropic/claude-haiku-4.5`) |
 | Grafana panels show "No data" | Prometheus scrape target down, or job name mismatch | [Prometheus targets page](http://localhost:9090/targets); see [docs/services/prometheus.md](services/prometheus.md) |
 | `langfuse` service slow to report healthy | Multi-container stack (Postgres/ClickHouse/Redis/MinIO) with health-check dependencies | `flox services logs langfuse --follow`; `docker compose -f observability/langfuse/docker-compose.yml ps` |
 | No trace appears in Langfuse for a run | `LANGFUSE_HOST`/`LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY` not set in the worker's environment | Confirm they're set under `[vars]` in `.flox/env/manifest.toml` and the `worker` service was started *after* that change |

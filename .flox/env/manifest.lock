@@ -17,6 +17,10 @@
         "pkg-path": "grafana-loki",
         "version": "3.6.8"
       },
+      "nodejs": {
+        "pkg-path": "nodejs_22",
+        "pkg-group": "node"
+      },
       "prometheus": {
         "pkg-path": "prometheus"
       },
@@ -47,6 +51,12 @@
       "alloy": {
         "command": "  mkdir -p \"$FLOX_ENV_CACHE/alloy\"\n  exec alloy run \"$FLOX_ENV_PROJECT/observability/alloy.alloy\" --storage.path=\"$FLOX_ENV_CACHE/alloy\" --server.http.listen-addr=127.0.0.1:12345\n"
       },
+      "api": {
+        "command": "  cd \"$FLOX_ENV_PROJECT\"\n  exec \"$PYTHON_DIR/bin/python\" -m agentloom.api.serve\n"
+      },
+      "frontend": {
+        "command": "  cd \"$FLOX_ENV_PROJECT/frontend\"\n  [ -d node_modules ] || npm install --no-audit --no-fund\n  export VITE_API_PROXY_TARGET=http://localhost:8000\n  exec npm run dev\n"
+      },
       "grafana": {
         "command": "  mkdir -p \"$FLOX_ENV_CACHE/grafana/data\" \"$FLOX_ENV_CACHE/grafana/logs\" \"$FLOX_ENV_CACHE/grafana/plugins\"\n  export GF_PATHS_DATA=\"$FLOX_ENV_CACHE/grafana/data\"\n  export GF_PATHS_LOGS=\"$FLOX_ENV_CACHE/grafana/logs\"\n  export GF_PATHS_PLUGINS=\"$FLOX_ENV_CACHE/grafana/plugins\"\n  export GF_PATHS_PROVISIONING=\"$FLOX_ENV_PROJECT/observability/grafana/provisioning\"\n  export AGENTLOOM_DASHBOARDS_DIR=\"$FLOX_ENV_PROJECT/observability/grafana/dashboards\"\n  export GF_AUTH_ANONYMOUS_ENABLED=true\n  export GF_AUTH_ANONYMOUS_ORG_ROLE=Admin\n  exec grafana server --homepath \"$FLOX_ENV/share/grafana\"\n"
       },
@@ -63,7 +73,7 @@
         "command": "  exec temporal server start-dev --metrics-port 9091 --db-filename \"$FLOX_ENV_CACHE/temporal.db\"\n"
       },
       "worker": {
-        "command": "  cd \"$FLOX_ENV_PROJECT\"\n  until temporal operator cluster health --address localhost:7233 >/dev/null 2>&1; do\n    sleep 1\n  done\n  export WORKER_LOG_FILE=\"$FLOX_ENV_CACHE/worker.log\"\n  exec \"$PYTHON_DIR/bin/python\" worker.py\n"
+        "command": "  cd \"$FLOX_ENV_PROJECT\"\n  until temporal operator cluster health --address localhost:7233 >/dev/null 2>&1; do\n    sleep 1\n  done\n  export WORKER_LOG_FILE=\"$FLOX_ENV_CACHE/worker.log\"\n  exec \"$PYTHON_DIR/bin/python\" -m agentloom.worker\n"
       }
     }
   },
@@ -298,6 +308,122 @@
       },
       "system": "x86_64-linux",
       "group": "grafana",
+      "priority": 5
+    },
+    {
+      "attr_path": "nodejs_22",
+      "broken": false,
+      "derivation": "/nix/store/pq9j3kpz21m4rhmy04qxrz6p1bqd8m57-nodejs-22.23.1.drv",
+      "description": "Event-driven I/O framework for the V8 JavaScript engine",
+      "install_id": "nodejs",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
+      "name": "nodejs-22.23.1",
+      "pname": "nodejs_22",
+      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
+      "rev_count": 1027867,
+      "rev_date": "2026-07-05T04:06:12Z",
+      "scrape_date": "2026-07-06T03:13:20.509310Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "22.23.1",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/smz0kkakhq96h1ipimiab6cf1yw4nn7n-nodejs-22.23.1"
+      },
+      "system": "aarch64-darwin",
+      "group": "node",
+      "priority": 5
+    },
+    {
+      "attr_path": "nodejs_22",
+      "broken": false,
+      "derivation": "/nix/store/h8zravrhkxfnx4zb5z1k5r9yfmg4nqf0-nodejs-22.23.1.drv",
+      "description": "Event-driven I/O framework for the V8 JavaScript engine",
+      "install_id": "nodejs",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
+      "name": "nodejs-22.23.1",
+      "pname": "nodejs_22",
+      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
+      "rev_count": 1027867,
+      "rev_date": "2026-07-05T04:06:12Z",
+      "scrape_date": "2026-07-06T03:42:00.478558Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "22.23.1",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/26r12fb2ywx1q5f9paf1sjibsajz1q99-nodejs-22.23.1"
+      },
+      "system": "aarch64-linux",
+      "group": "node",
+      "priority": 5
+    },
+    {
+      "attr_path": "nodejs_22",
+      "broken": false,
+      "derivation": "/nix/store/3vxsfqn82i1z86659wiasjlb2dfvgibm-nodejs-22.23.1.drv",
+      "description": "Event-driven I/O framework for the V8 JavaScript engine",
+      "install_id": "nodejs",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
+      "name": "nodejs-22.23.1",
+      "pname": "nodejs_22",
+      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
+      "rev_count": 1027867,
+      "rev_date": "2026-07-05T04:06:12Z",
+      "scrape_date": "2026-07-06T04:09:32.260955Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "22.23.1",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/l1yfdvdrz1vl6f3wsyjglxgsk6r29rkn-nodejs-22.23.1"
+      },
+      "system": "x86_64-darwin",
+      "group": "node",
+      "priority": 5
+    },
+    {
+      "attr_path": "nodejs_22",
+      "broken": false,
+      "derivation": "/nix/store/hwfi98yarrbhlncwsgad2bjw2g2ighqh-nodejs-22.23.1.drv",
+      "description": "Event-driven I/O framework for the V8 JavaScript engine",
+      "install_id": "nodejs",
+      "license": "MIT",
+      "locked_url": "https://github.com/flox/nixpkgs?rev=d407951447dcd00442e97087bf374aad70c04cea",
+      "name": "nodejs-22.23.1",
+      "pname": "nodejs_22",
+      "rev": "d407951447dcd00442e97087bf374aad70c04cea",
+      "rev_count": 1027867,
+      "rev_date": "2026-07-05T04:06:12Z",
+      "scrape_date": "2026-07-06T04:41:05.930896Z",
+      "stabilities": [
+        "unstable"
+      ],
+      "unfree": false,
+      "version": "22.23.1",
+      "outputs_to_install": [
+        "out"
+      ],
+      "outputs": {
+        "out": "/nix/store/znxrv89969njb8fxyyn8rz4ygmmcjpw9-nodejs-22.23.1"
+      },
+      "system": "x86_64-linux",
+      "group": "node",
       "priority": 5
     },
     {

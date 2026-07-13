@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Dev: single replica, small footprint.
+#   kubectl apply -k deploy/k8s/overlays/dev
+
+namespace: agentloom-dev
+
+resources:
+  - namespace.yaml
+  - ../../base
+
+patches:
+  - path: worker-patch.yaml
+
+configMapGenerator:
+  - name: agentloom-config
+    behavior: merge
+    literals:
+      # In dev, point at wherever your Temporal frontend runs — e.g. a
+      # `temporal server start-dev` port-forwarded into the cluster, or the
+      # Temporal helm chart in the `temporal` namespace.
+      - TEMPORAL_ADDRESS=temporal-frontend.temporal.svc.cluster.local:7233
+      - TEMPORAL_NAMESPACE=default
+
+images:
+  - name: agentloom-worker
+    newTag: dev

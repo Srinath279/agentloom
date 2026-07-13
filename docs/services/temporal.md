@@ -45,14 +45,14 @@ function that starts over from scratch on any crash.
 ## How to use it effectively
 
 **Watch a run live:** open <http://localhost:8233>, find your workflow by ID
-(e.g. `loom-<uuid>` from `start_workflow.py`), and inspect the event history —
+(e.g. `loom-<uuid>` from `src/agentloom/cli.py`), and inspect the event history —
 every activity's input, output, retries, and timing.
 
 **Prove durability to yourself:**
 
 ```sh
 flox services stop worker
-uv run python -m start_workflow "Durable execution" &
+uv run python -m agentloom.cli "Durable execution" &
 sleep 2
 flox services start worker
 ```
@@ -90,10 +90,10 @@ temporal operator cluster health --address localhost:7233
   call here sets `start_to_close_timeout` — without one, a hung activity can
   block a workflow indefinitely.
 - **One task queue per worker pool.** All workflows/activities here share
-  `agentloom-task-queue` (defined in `worker.py` and `start_workflow.py`) —
+  `agentloom-task-queue` (defined in `src/agentloom/worker.py` and `src/agentloom/cli.py`) —
   keep client and worker queue names in sync, or workflows will never be
   picked up.
-- **Use workflow IDs meaningfully.** `start_workflow.py` generates
+- **Use workflow IDs meaningfully.** `src/agentloom/cli.py` generates
   `loom-<uuid>`; consider deterministic IDs (e.g. derived from input) if you
   want Temporal's built-in dedup ("don't start a second workflow for the same
   logical request") rather than a fresh run every time.

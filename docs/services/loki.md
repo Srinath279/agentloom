@@ -22,7 +22,7 @@ and stream the `worker` service's logs from inside Grafana instead of
   labeled `job=agentloom-worker`. Its own HTTP UI/API listens on `:12345`
   (`--server.http.listen-addr`), separate from anything it ships.
 
-The worker only writes to that log file because `worker.py`'s
+The worker only writes to that log file because `src/agentloom/worker.py`'s
 `_configure_logging()` adds a `logging.FileHandler` when `WORKER_LOG_FILE` is
 set — which the `[services.worker]` command does, pointing it at
 `$FLOX_ENV_CACHE/worker.log`.

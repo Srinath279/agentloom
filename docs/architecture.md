@@ -14,8 +14,8 @@ flowchart TB
 
         subgraph exec["execution layer"]
             direction LR
-            SW["start_workflow.py"] -->|"execute_workflow"| T["Temporal server (dev mode)\ngRPC :7233 · Web UI :8233 · metrics :9091"]
-            T <-->|"poll agentloom-task-queue"| W["AgentLoom worker (worker.py)\nSDK metrics :9464"]
+            SW["src/agentloom/cli.py"] -->|"execute_workflow"| T["Temporal server (dev mode)\ngRPC :7233 · Web UI :8233 · metrics :9091"]
+            T <-->|"poll agentloom-task-queue"| W["AgentLoom worker (src/agentloom/worker.py)\nSDK metrics :9464"]
             W -->|"HTTPS"| OR["OpenRouter\n(proxies to Claude)"]
             W -->|"HTTP (local GPU)"| OL["Ollama\nlocalhost:11434"]
         end
@@ -45,18 +45,18 @@ the diagram runs regardless of which LLM backend is configured.
 
 ## Request flow, step by step
 
-1. `start_workflow.py` connects to Temporal (`localhost:7233`) and calls
+1. `src/agentloom/cli.py` connects to Temporal (`localhost:7233`) and calls
    `client.execute_workflow(LoomWorkflow.run, topic, ...)`, which appends a
    `WorkflowExecutionStarted` event to a new workflow history and blocks
    waiting for the result.
 2. Temporal server places a task on `agentloom-task-queue`. The worker
    (long-polling that queue) picks it up and runs `LoomWorkflow.run` inside
    its **workflow sandbox** — deterministic Python, no I/O allowed directly.
-3. The workflow calls `workflow.execute_activity(openai_responses.create, ...)`
+3. The workflow calls `workflow.execute_activity(llm.run_llm, ...)`
    for each agent step. This is scheduled as a durable, retryable unit of
    work; Temporal records the *decision* to run it in workflow history before
    the worker executes it.
-4. The worker executes the **activity** (`activities/openai_responses.py`) —
+4. The worker executes the **activity** (`src/agentloom/activities/llm.py`) —
    this is where non-deterministic, real-world work happens: an HTTP call to
    an OpenAI-compatible chat completions API — OpenRouter (which proxies to
    Claude) by default, or a local model server like Ollama when
@@ -71,7 +71,7 @@ the diagram runs regardless of which LLM backend is configured.
    Each step is a separate, independently retryable activity — see
    [docs/services/workflows.md](services/workflows.md).
 7. The final result flows back through workflow history to the blocked
-   `execute_workflow` call in `start_workflow.py`, which prints it.
+   `execute_workflow` call in `src/agentloom/cli.py`, which prints it.
 8. Throughout, the worker's Temporal SDK metrics (activity latencies, retry
    counts, task-queue backlog, etc.) are exposed on `:9464` and the Temporal
    server's internal metrics on `:9091`. Prometheus scrapes both every 10s;
@@ -85,7 +85,7 @@ the diagram runs regardless of which LLM backend is configured.
 - **Determinism boundary.** Workflow code (`workflows/*.py`) must be
   deterministic — no network calls, no `httpx`, no randomness without
   Temporal's helpers. All non-deterministic work (the actual LLM call) lives
-  in an *activity* (`activities/openai_responses.py`), which runs outside the
+  in an *activity* (`src/agentloom/activities/llm.py`), which runs outside the
   sandbox. This is why the workflow files import the activity module inside
   `workflow.unsafe.imports_passed_through()` — otherwise loading `httpx`/
   `langfuse` at workflow-definition time would fail the sandbox's import
@@ -96,7 +96,7 @@ the diagram runs regardless of which LLM backend is configured.
   means retry behavior is visible and controllable from one place (the
   workflow definition / Temporal UI), not buried in client library config.
 - **One generic activity, many agents.** Every agent — researcher, writer,
-  critic — calls the same `openai_responses.create` activity with different
+  critic — calls the same `llm.run_llm` activity with different
   `instructions`. The pipeline's *shape* (fan-out, sequencing) lives entirely
   in workflow code, so adding an agent is a workflow-level change, not a new
   activity.

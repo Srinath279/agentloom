@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agentloom-config
+data:
+  # Address of the Temporal frontend. Overlays override this per environment
+  # (in-cluster service, self-hosted, or Temporal Cloud).
+  TEMPORAL_ADDRESS: "temporal-frontend.temporal.svc.cluster.local:7233"
+  TEMPORAL_NAMESPACE: "default"
+  # Bind metrics on all interfaces so Prometheus can scrape the pod.
+  WORKER_METRICS_ADDRESS: "0.0.0.0:9464"
+  LLM_MODEL: "anthropic/claude-haiku-4.5"
