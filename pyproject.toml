@@ -13,6 +13,10 @@ dependencies = [
     "uvicorn[standard]>=0.30.0",
 ]
 
+[project.optional-dependencies]
+# E2B compute provider for agentloom.sandbox (needs E2B_API_KEY at runtime).
+e2b = ["e2b>=1.0"]
+
 [project.scripts]
 agentloom-worker = "agentloom.worker:run"
 agentloom-run = "agentloom.cli:run"

@@ -4,12 +4,15 @@ Planned capabilities and where they will live in the codebase. Placeholder
 packages already exist under `src/agentloom/` so future work lands in a
 predictable spot without another restructure.
 
-## Sandboxing — `src/agentloom/sandbox/`
+## Sandboxing — `src/agentloom/sandbox/` (shipped)
 
-Run agent-generated code and risky tool calls in an isolated runtime
-(container or microVM) with resource limits and no network by default.
-Shape: a dedicated Temporal activity (`run_sandboxed`) so isolation failures
-get the same retry/timeout semantics as any other activity.
+Done — see [services/sandbox.md](services/sandbox.md). Ported from Temporal's
+[sandbox-orchestration-harness](https://github.com/temporal-community/sandbox-orchestration-harness):
+each sandbox is a long-lived child workflow driving a pluggable compute
+provider (local Docker out of the box, E2B optional), with suspend/resume,
+snapshot/fork, and idle auto-suspend. Remaining follow-ups: resource limits
+and network isolation policies for the local-docker provider, and porting
+more providers (Modal, Daytona, AgentCore, GKE Agent Sandbox).
 
 ## MCP tools — `src/agentloom/tools/`
 
@@ -49,8 +52,8 @@ strings. Builds on tools + memory above.
 
 Suggested order, based on dependencies:
 
-1. MCP tools (unlocks everything else that needs side effects)
-2. Sandboxing (required before tools can run untrusted code)
-3. Agent memory, then the LLM wiki on top of it
-4. Agent skills (composes tools + memory)
-5. Richer multi-agent patterns (continuous, as use cases appear)
+1. MCP tools (unlocks everything else that needs side effects); sandboxing
+   is already in place for tools that run untrusted code
+2. Agent memory, then the LLM wiki on top of it
+3. Agent skills (composes tools + memory)
+4. Richer multi-agent patterns (continuous, as use cases appear)

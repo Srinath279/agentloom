@@ -31,7 +31,10 @@ src/agentloom/          the application package
 ├── agents/             declarative agent templates (AgentSpec + catalog)
 ├── activities/         non-deterministic work (the shared LLM activity)
 ├── workflows/          deterministic orchestration (HelloWorld, LoomWorkflow,
-│                       ChatWorkflow — durable interactive chat)
+│                       ChatWorkflow — durable interactive chat,
+│                       SandboxDemoWorkflow)
+├── sandbox/            ephemeral compute sandboxes for agent shell commands
+│                       (local Docker or E2B; suspend/resume, snapshot/fork)
 ├── api/                FastAPI control plane for the chat UI
 ├── worker.py           hosts ALL workflows + activities  → agentloom-worker
 ├── cli.py              submits a loom run                → agentloom-run
@@ -54,6 +57,14 @@ instructions + optional model override) in
 agent runs through the same LLM activity; workflows compose specs. Adding an
 agent = one spec + one `self._run_agent(...)` call. New workflows/activities
 register themselves by joining the `ALL_WORKFLOWS` / `ALL_ACTIVITIES` lists.
+
+**Sandboxes:** any workflow can run shell commands in isolated, durable
+compute via [agentloom.sandbox](src/agentloom/sandbox/__init__.py) — a
+Python port of Temporal's
+[sandbox-orchestration-harness](https://github.com/temporal-community/sandbox-orchestration-harness):
+`sbx = await Sandbox.create(ProviderDetails(type="local-docker"))`, then
+`await sbx.execute_command("...")`. See
+[docs/services/sandbox.md](docs/services/sandbox.md).
 
 ## Quick start (local)
 
@@ -142,5 +153,6 @@ Everything lives under [docs/](docs/README.md):
 [architecture](docs/architecture.md) ·
 [local e2e guide](docs/e2e-testing.md) ·
 [Kubernetes deployment](docs/deployment/kubernetes.md) ·
-[roadmap](docs/roadmap.md) (sandboxing, MCP tools, agent memory, skills) ·
+[sandboxes](docs/services/sandbox.md) ·
+[roadmap](docs/roadmap.md) (MCP tools, agent memory, skills) ·
 per-service reference in [docs/services/](docs/README.md#per-service-reference)

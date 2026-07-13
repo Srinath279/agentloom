@@ -39,3 +39,19 @@ LLM_MODEL = os.environ.get("LLM_MODEL", "anthropic/claude-haiku-4.5")
 LLM_ACTIVITY_TIMEOUT = timedelta(
     seconds=int(os.environ.get("LLM_ACTIVITY_TIMEOUT_SECONDS", "180"))
 )
+
+# --- Sandboxes ----------------------------------------------------------------
+# Ephemeral compute for agent shell commands (agentloom.sandbox). The default
+# local-docker provider runs sandboxes as containers of this image.
+SANDBOX_DOCKER_IMAGE = os.environ.get("SANDBOX_DOCKER_IMAGE", "python:3.12-slim")
+# Per-operation activity timeout (provision, suspend, resume, snapshot, stop).
+SANDBOX_OPERATION_TIMEOUT = timedelta(
+    seconds=int(os.environ.get("SANDBOX_OPERATION_TIMEOUT_SECONDS", "600"))
+)
+# End-to-end timeout for a command (includes a possible transparent resume).
+SANDBOX_COMMAND_TIMEOUT = timedelta(
+    seconds=int(os.environ.get("SANDBOX_COMMAND_TIMEOUT_SECONDS", "1200"))
+)
+# A sandbox idle longer than this is auto-suspended (per-sandbox override via
+# Sandbox.create(idle_timeout_seconds=...); -1 there disables it).
+SANDBOX_IDLE_TIMEOUT_SECONDS = float(os.environ.get("SANDBOX_IDLE_TIMEOUT_SECONDS", "300"))

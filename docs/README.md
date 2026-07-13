@@ -20,6 +20,7 @@
 | [services/worker.md](services/worker.md) | The worker process (`agentloom.worker`) |
 | [services/activities.md](services/activities.md) | The shared LLM activity (`agentloom.activities.llm`) |
 | [services/workflows.md](services/workflows.md) | Workflow orchestration and the agent catalog |
+| [services/sandbox.md](services/sandbox.md) | Ephemeral compute sandboxes (`agentloom.sandbox`) |
 | [services/prometheus.md](services/prometheus.md) | Metrics scraping |
 | [services/grafana.md](services/grafana.md) | Dashboards |
 | [services/loki.md](services/loki.md) | Log storage (worker logs via Alloy) |
@@ -28,5 +29,5 @@
 
 ## Roadmap
 
-- [roadmap.md](roadmap.md) — planned features: sandboxing, MCP tools,
+- [roadmap.md](roadmap.md) — planned features: MCP tools,
   richer multi-agent patterns, agent memory, LLM knowledge wiki, agent skills

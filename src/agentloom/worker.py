@@ -15,6 +15,7 @@ from temporalio.worker import Worker
 
 from agentloom import config
 from agentloom.activities import ALL_ACTIVITIES
+from agentloom.sandbox import SANDBOX_WORKFLOWS, sandbox_activities
 from agentloom.workflows import ALL_WORKFLOWS
 
 log = logging.getLogger("agentloom.worker")
@@ -47,16 +48,18 @@ async def main():
         runtime=runtime,
     )
 
+    workflows = [*ALL_WORKFLOWS, *SANDBOX_WORKFLOWS]
+    activities = [*ALL_ACTIVITIES, *sandbox_activities(client)]
     worker = Worker(
         client,
         task_queue=config.TASK_QUEUE,
-        workflows=ALL_WORKFLOWS,
-        activities=ALL_ACTIVITIES,
+        workflows=workflows,
+        activities=activities,
     )
     log.info(
         "worker starting: %d workflows, %d activities on %s",
-        len(ALL_WORKFLOWS),
-        len(ALL_ACTIVITIES),
+        len(workflows),
+        len(activities),
         config.TASK_QUEUE,
     )
     await worker.run()
