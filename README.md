@@ -23,6 +23,128 @@ Every call is traced ([Langfuse](https://langfuse.com)), every execution is
 measured ([Prometheus](https://prometheus.io) + [Grafana](https://grafana.com)),
 and the whole local stack is one command via [Flox](https://flox.dev).
 
+## Capabilities at a glance
+
+Everything below starts with a single `flox activate --start-services`. Each
+capability has a deeper reference doc under [docs/services/](docs/README.md#per-service-reference).
+
+| Capability | Service(s) | Where | Docs |
+|---|---|---|---|
+| Durable execution | Temporal dev server | gRPC `:7233` · Web UI <http://localhost:8233> · metrics `:9091` | [temporal.md](docs/services/temporal.md) |
+| Agent workflows | `worker` (hosts all workflows + activities) | metrics `:9464`, logs to `$FLOX_ENV_CACHE/worker.log` | [worker.md](docs/services/worker.md) · [workflows.md](docs/services/workflows.md) |
+| LLM calls | shared LLM activity → any OpenAI-compatible endpoint | OpenRouter by default, or Ollama via `LLM_BASE_URL` | [activities.md](docs/services/activities.md) |
+| Chat UI | `api` (FastAPI) + `frontend` (React/Vite) | API `:8000` · UI <http://localhost:5173> | [workflows.md](docs/services/workflows.md) |
+| Sandboxes | `agentloom.sandbox` (local Docker or E2B) | runs inside workflows | [sandbox.md](docs/services/sandbox.md) |
+| Metrics | Prometheus | <http://localhost:9090> | [prometheus.md](docs/services/prometheus.md) |
+| Dashboards | Grafana (auto-provisioned) | <http://localhost:3000> | [grafana.md](docs/services/grafana.md) |
+| Logs | Loki + Grafana Alloy | Loki `:3100` · Alloy UI `:12345` | [loki.md](docs/services/loki.md) |
+| LLM tracing | Langfuse (self-hosted, Docker Compose) | <http://localhost:3001> | [langfuse.md](docs/services/langfuse.md) |
+| Local env & services | Flox (process-compose) | `flox services status` | [flox.md](docs/services/flox.md) |
+| Kubernetes deploy | Kustomize base + dev/prod overlays | `deploy/k8s/` | [kubernetes.md](docs/deployment/kubernetes.md) |
+
+### Temporal — durable execution
+
+Temporal is the "loom": every workflow step is persisted as an append-only
+event history, so if a worker dies mid-pipeline (crash, deploy, OOM), a
+reconnecting worker replays the history and resumes at exactly the next
+undone step — no lost or duplicated LLM calls. Locally it runs as the
+single-binary dev server with state in SQLite
+(`$FLOX_ENV_CACHE/temporal.db`), so workflows survive service restarts too.
+Watch any run live in the Web UI at <http://localhost:8233>: inputs, outputs,
+retries, and timing for every activity.
+
+![Temporal Web UI showing a completed LoomWorkflow: input, result, and the event history timeline with the four run_llm activities](docs/images/temporal-workflow.png)
+
+### Workflows & agents
+
+Four workflows ship today, all hosted by the one worker process:
+
+- **`LoomWorkflow`** — the flagship pipeline: two researcher agents run in
+  parallel (facts + misconceptions), then a writer drafts a brief, then a
+  critic edits it. Submit one with `uv run python -m agentloom.cli "<topic>"`.
+- **`ChatWorkflow`** — durable interactive chat: messages arrive as Temporal
+  signals, the transcript is workflow state, so conversations survive page
+  reloads and worker crashes.
+- **`SandboxDemoWorkflow`** — demonstrates running shell commands in an
+  ephemeral sandbox from workflow code.
+- **`HelloWorld`** — the minimal smoke-test workflow.
+
+An agent is just an `AgentSpec` (name + instructions + optional model
+override) in [catalog.py](src/agentloom/agents/catalog.py); every agent runs
+through the same generic LLM activity, and Temporal's retry policy — not SDK
+retry loops — owns backoff and recovery.
+
+### Sandboxes — ephemeral compute
+
+Workflows can run shell commands in isolated, durable sandboxes
+([agentloom.sandbox](src/agentloom/sandbox/__init__.py)) backed by local
+Docker or [E2B](https://e2b.dev), with suspend/resume and snapshot/fork. It's
+a Python port of Temporal's
+[sandbox-orchestration-harness](https://github.com/temporal-community/sandbox-orchestration-harness).
+
+### Prometheus — metrics
+
+Prometheus scrapes Temporal server (`:9091`) and the worker (`:9464`) every
+10 seconds and stores the history that Grafana's dashboards query. Use
+<http://localhost:9090> for ad-hoc PromQL
+(`temporal_workflow_completed_total`, `temporal_activity_execution_latency_bucket`)
+and <http://localhost:9090/targets> to check scrape health — a "No data"
+Grafana panel is almost always a down scrape target.
+
+### Grafana — dashboards
+
+Grafana at <http://localhost:3000> (anonymous admin for local dev, no login)
+is fully auto-provisioned from
+[observability/grafana/provisioning/](observability/grafana/provisioning/):
+Prometheus and Loki datasources, plus every dashboard JSON in
+[observability/grafana/dashboards/](observability/grafana/dashboards/)
+loaded into a **Temporal** folder. Two dashboards ship today:
+
+- **Temporal Server** ([temporal-server.json](observability/grafana/dashboards/temporal-server.json)) —
+  server-side actions, task queue, persistence health.
+- **Temporal SDK** ([temporal-sdk.json](observability/grafana/dashboards/temporal-sdk.json)) —
+  worker-side: activity execution latency, retries, poller status, sticky cache.
+
+Because dashboards are provisioned from versioned JSON, every contributor
+gets identical dashboards with zero clicking; export UI edits back to the
+JSON file or they'll be overwritten on the next provisioning sync.
+
+![Grafana Temporal Server Metrics dashboard: actions, service availability, and persistence availability panels](docs/images/grafana-server-dashboard.png)
+
+![Grafana Temporal SDK dashboard: RPC requests per operation and p95 RPC latencies for the worker](docs/images/grafana-sdk-dashboard.png)
+
+### Loki + Alloy — logs in Grafana
+
+The worker writes its own log file (`$FLOX_ENV_CACHE/worker.log`); Grafana
+Alloy tails it and ships every line into Loki (`:3100`), labeled
+`job=agentloom-worker`. That makes worker logs searchable from the same
+Grafana instance as the metrics dashboards — one pane for "is it running"
+(Prometheus) and "what actually happened" (Loki) instead of tailing
+terminals.
+
+### Langfuse — LLM trace observability
+
+Where Grafana shows *system* health, Langfuse at <http://localhost:3001>
+shows *content*: the exact prompt, response, token usage, latency, and errors
+for every agent call. It runs as a self-hosted Docker Compose stack
+(web, worker, Postgres, ClickHouse, Redis, MinIO) with seeded local-dev keys
+already wired into the environment — no login or API-key copy-paste needed.
+Traces follow the workflow, not the process: `session_id` = Temporal workflow
+ID, so retries executed on other workers still land in the same trace, and a
+whole chat session reads as one Langfuse session.
+
+![Langfuse traces view: each LoomWorkflow agent call (researcher, contrarian, writer, critic) and a ChatWorkflow reply, with full prompt and response text](docs/images/langfuse-traces.png)
+
+### Flox — one-command local stack
+
+[Flox](https://flox.dev) declares every tool and service in
+[.flox/env/manifest.toml](.flox/env/manifest.toml): `temporal`, `worker`,
+`api`, `frontend`, `prometheus`, `loki`, `alloy`, `grafana`, and `langfuse`
+(the only one needing Docker). `flox activate --start-services` brings the
+whole stack up; `flox services status` / `flox services logs <name> -f`
+manage it. The same env vars drive config locally (`.env`) and in-cluster
+(ConfigMap/Secret).
+
 ## Repository layout
 
 ```
@@ -106,6 +228,8 @@ crashes, and every reply is traced in Langfuse under the chat's session.
 flox activate --start-services   # also starts the api and frontend services
 open http://localhost:5173       # ask anything — first message starts a session
 ```
+
+![AgentLoom chat UI: a durable conversation backed by a ChatWorkflow, with links out to Temporal, Grafana, and Langfuse](docs/images/chat-ui.png)
 
 ## Deploying to Kubernetes
 
