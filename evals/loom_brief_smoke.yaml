@@ -1,0 +1,29 @@
+# 1-case smoke variant — used for the Temporal EvalRunWorkflow path:
+#   python -m agent_evals.pipelines.worker           # terminal A
+#   temporal workflow execute --type EvalRunWorkflow --task-queue agent-evals \
+#     --workflow-id loom-eval-smoke -i '"evals/loom_brief_smoke.yaml"' -i 1 -i '"evals/runs"'
+agent: loom-brief-smoke
+trace_adapter: langfuse-generic
+task_fn: evals.loom_task:invoke_loom
+local_dataset: golden_loom_smoke.jsonl
+repeats: 1
+
+judge:
+  provider: openai
+  model: qwen2.5:14b-instruct
+  fallback: {provider: mock, model: mock-judge}
+
+evaluators:
+  - name: goal_success
+    rubric_from_langfuse: true
+    rubric_name: evals/goal_success
+  - tool_called
+  - name: word_count_range
+    field: final
+    min_words: 40
+    max_words: 2000
+
+score_thresholds:
+  goal_success: 0.6
+  tool_called: 1.0
+  word_count_range: 1.0

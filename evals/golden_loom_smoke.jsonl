@@ -1,0 +1,1 @@
+{"case_id": "loom-smoke-001", "input": {"topic": "HTTP caching"}, "expected_output": "A short brief explaining HTTP caching (cache-control, validators) and one misconception.", "expected_tools": ["research_facts", "research_misconceptions", "write_draft", "critique"]}

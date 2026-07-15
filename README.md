@@ -39,6 +39,7 @@ capability has a deeper reference doc under [docs/services/](docs/README.md#per-
 | Dashboards | Grafana (auto-provisioned) | <http://localhost:3000> | [grafana.md](docs/services/grafana.md) |
 | Logs | Loki + Grafana Alloy | Loki `:3100` · Alloy UI `:12345` | [loki.md](docs/services/loki.md) |
 | LLM tracing | Langfuse (self-hosted, Docker Compose) | <http://localhost:3001> | [langfuse.md](docs/services/langfuse.md) |
+| Agent evals | [agent-evals](https://github.com/Srinath279/agent-evals) library (`evals/` configs) | `uv run evals run --config evals/loom_brief.yaml` · scores & rubrics in Langfuse | [evals.md](docs/services/evals.md) |
 | Local env & services | Flox (process-compose) | `flox services status` | [flox.md](docs/services/flox.md) |
 | Kubernetes deploy | Kustomize base + dev/prod overlays | `deploy/k8s/` | [kubernetes.md](docs/deployment/kubernetes.md) |
 

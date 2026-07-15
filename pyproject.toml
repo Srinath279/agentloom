@@ -11,6 +11,8 @@ dependencies = [
     "langfuse>=3.0",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
+    "agent-evals",
+    "openai>=2.45.0",
 ]
 
 [project.optional-dependencies]
@@ -40,3 +42,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.uv.sources]
+agent-evals = { path = "../../../../agent-evals", editable = true }

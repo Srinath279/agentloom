@@ -1,0 +1,47 @@
+# Eval config for the LoomWorkflow brief pipeline (agent-evals library).
+#
+#   uv run evals push-rubrics --config evals/loom_brief.yaml   # once, seeds PM
+#   uv run evals run --config evals/loom_brief.yaml --out evals/runs --post-scores
+#
+# Requires: temporal dev server + agentloom worker + Langfuse (all local).
+agent: loom-brief
+trace_adapter: langfuse-generic
+task_fn: evals.loom_task:invoke_loom
+local_dataset: golden_loom.jsonl        # mirrored to Langfuse via seed-dataset
+langfuse_dataset: loom-brief-golden-v1  # used by seed-dataset as the target name
+repeats: 1                              # local LLM is slow; raise for pass^k
+
+judge:
+  provider: openai                      # Ollama's OpenAI-compatible endpoint —
+  model: qwen2.5:14b-instruct           #   free local judge (OPENAI_BASE_URL in .env)
+  fallback:
+    provider: mock                      # keeps runs alive if Ollama is down;
+    model: mock-judge                   #   stamps reveal which judge scored
+
+evaluators:
+  - name: goal_success
+    rubric_from_langfuse: true          # rubric served from Langfuse Prompt Management
+    rubric_name: evals/goal_success
+  - tool_called                         # all four pipeline stages produced output
+  - tool_selection
+  - name: steps_efficiency
+    max_steps: 5
+  - name: latency_threshold
+    threshold_ms: 480000                # 8 min end-to-end on local inference
+  - name: cost_threshold
+    max_usd: 0.05
+  - name: word_count_range
+    field: final
+    min_words: 40
+    max_words: 2000
+  - name: forbidden_content
+    patterns:
+      - "(?i)as an ai( language)? model"
+      - "(?i)lorem ipsum"
+
+score_thresholds:
+  goal_success: 0.6                     # lenient: 14B local judge; tighten after calibration
+  tool_called: 1.0
+  word_count_range: 1.0
+  forbidden_content: 1.0
+  latency_threshold: 1.0

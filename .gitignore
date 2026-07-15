@@ -10,3 +10,7 @@ dist/
 *.sqlite3
 node_modules/
 frontend/dist/
+
+# eval run artifacts (reports/manifests/score caches)
+evals/runs/
+evals/baselines/
